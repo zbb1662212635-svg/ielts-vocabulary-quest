@@ -1,10 +1,12 @@
 export type SkillTag = "reading" | "listening" | "writing" | "speaking";
 
 export type SourceLayer =
+  | "private_vocabulary"
   | "topic_vocabulary"
   | "academic_word_list"
   | "listening_survival"
   | "reading_paraphrase"
+  | "foreign_press_reading"
   | "collocation";
 
 export type ErrorType =
@@ -26,6 +28,7 @@ export type ExampleSentence = {
   translation?: string;
   context: "reading" | "listening" | "general";
   targetWord: string;
+  source?: string;
 };
 
 export type ListeningRisk = {
@@ -39,6 +42,7 @@ export type ListeningRisk = {
 export type VocabularyItem = {
   id: string;
   word: string;
+  normalizedWord?: string;
   partOfSpeech: string[];
   chineseMeaning: string;
   englishDefinition?: string;
@@ -53,6 +57,10 @@ export type VocabularyItem = {
   wordFamily: string[];
   commonMistakes?: string[];
   listeningRisk?: ListeningRisk;
+  sourceResourceId?: string;
+  sourceFileName?: string;
+  sourcePath?: string;
+  importWarnings?: string[];
 };
 
 export type TrainingAttempt = {

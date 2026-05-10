@@ -214,7 +214,7 @@ function inferFileKind(extension: string): ResourceFileKind {
   if ([".epub", ".mobi", ".azw3"].includes(extension)) return "ebook";
   if ([".mp3", ".m4a", ".wav", ".flac", ".aac"].includes(extension)) return "audio";
   if ([".txt", ".md", ".docx"].includes(extension)) return "text";
-  if ([".csv", ".json", ".xlsx"].includes(extension)) return "structured_data";
+  if ([".csv", ".json", ".xls", ".xlsx"].includes(extension)) return "structured_data";
   return "unknown";
 }
 

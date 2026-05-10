@@ -23,7 +23,8 @@ import { detectDictationError, isAnswerCorrect } from "@/lib/normalizer";
 import { getReadingCoachFeedback, readingErrorType } from "@/lib/readingCoach";
 import { applyAttempt } from "@/lib/scoring";
 import { getProgressMap, saveAttempt, saveProgressMap, upsertReviewItem } from "@/lib/storage";
-import type { ErrorType, MissionStage, ReadingQuestion, TrainingAttempt } from "@/lib/types";
+import type { ErrorType, IELTSMission, MissionStage, ReadingQuestion, TrainingAttempt, VocabularyItem } from "@/lib/types";
+import { useVocabulary } from "@/lib/useVocabulary";
 
 const CURRENT_MISSION_ID_KEY = "ielts-mission-lab:currentMissionId";
 const CURRENT_STAGE_KEY = "ielts-mission-lab:currentMissionStage";
@@ -47,7 +48,8 @@ export default function MissionPage() {
 }
 
 function MissionExperience() {
-  const mission = getSafeTodayMission();
+  const vocabularyData = useVocabulary();
+  const mission = useMemo(() => enrichMissionWithVocabulary(getSafeTodayMission(), vocabularyData.items), [vocabularyData.items]);
   const route = topicRouteLabels[mission.topicRoute];
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -711,4 +713,85 @@ function countCorrect(items: { submitted: boolean; isCorrect: boolean }[]) {
 function percent(correct: number, total: number) {
   if (!total) return 0;
   return Math.round((correct / total) * 100);
+}
+
+function enrichMissionWithVocabulary(mission: IELTSMission, vocabulary: VocabularyItem[]): IELTSMission {
+  if (!vocabulary.length) return mission;
+  const selected = selectMissionVocabulary(mission, vocabulary, 10);
+  if (!selected.length) return mission;
+
+  const vocabularyLoadout = selected.map((item) => ({
+    id: item.id,
+    word: item.word,
+    chineseMeaning: item.chineseMeaning || "待补充释义",
+    englishDefinition: item.englishDefinition || item.examples[0]?.sentence || `${item.word} is an IELTS vocabulary item.`,
+    exampleSentence: item.examples[0]?.sentence || `Use ${item.word} accurately in the mission context.`,
+    synonyms: item.synonyms.length ? item.synonyms : [item.word],
+    collocations: item.collocations,
+    ieltsUsageNote: buildUsageNote(item),
+    listeningRisk: item.listeningRisk?.spellingRisk ? "High-risk spelling word for IELTS Listening." : undefined,
+  }));
+
+  const dictationItems = selectDictationVocabulary(mission, vocabulary, 6).map((item) => ({
+    id: `dictation_${item.id}`,
+    prompt: `Listen and type the IELTS word: ${item.chineseMeaning || item.word}`,
+    answer: item.word,
+    contextNote: item.listeningRisk?.spellingRisk
+      ? "This word is spelling-sensitive in IELTS Listening."
+      : "Use this as mission vocabulary dictation practice.",
+  }));
+
+  return {
+    ...mission,
+    vocabularyLoadout,
+    listeningScene: {
+      ...mission.listeningScene,
+      items: dictationItems.length ? dictationItems : mission.listeningScene.items,
+    },
+  };
+}
+
+function selectMissionVocabulary(mission: IELTSMission, vocabulary: VocabularyItem[], count: number) {
+  const usable = vocabulary.filter((item) => item.word);
+  const topicMatched = usable.filter((item) => item.topicTags.includes(mission.topicRoute));
+  const pool = topicMatched.length >= count ? topicMatched : [...topicMatched, ...usable.filter((item) => !topicMatched.includes(item))];
+  return pool
+    .sort((a, b) => scoreVocabularyForMission(b, mission) - scoreVocabularyForMission(a, mission))
+    .slice(0, count);
+}
+
+function selectDictationVocabulary(mission: IELTSMission, vocabulary: VocabularyItem[], count: number) {
+  return vocabulary
+    .filter((item) => item.word)
+    .sort((a, b) => scoreDictationVocabulary(b, mission) - scoreDictationVocabulary(a, mission))
+    .slice(0, count);
+}
+
+function scoreVocabularyForMission(item: VocabularyItem, mission: IELTSMission) {
+  let score = 0;
+  if (item.topicTags.includes(mission.topicRoute)) score += 20;
+  if (item.listeningRisk?.spellingRisk) score += 8;
+  if (item.synonyms.length) score += 6;
+  if (item.chineseMeaning) score += 4;
+  if (item.examples.length) score += 2;
+  return score;
+}
+
+function scoreDictationVocabulary(item: VocabularyItem, mission: IELTSMission) {
+  let score = 0;
+  if (item.listeningRisk?.spellingRisk) score += 20;
+  if (item.word.length >= 9) score += 8;
+  if (item.topicTags.includes(mission.topicRoute)) score += 6;
+  if (item.skillTags.includes("listening")) score += 4;
+  return score;
+}
+
+function buildUsageNote(item: VocabularyItem) {
+  if (item.synonyms.length) {
+    return `In IELTS Reading, connect ${item.word} with paraphrases such as ${item.synonyms.slice(0, 3).join(", ")}.`;
+  }
+  if (item.listeningRisk?.spellingRisk) {
+    return `${item.word} is useful for dictation because spelling accuracy affects IELTS Listening scores.`;
+  }
+  return `Use ${item.word} as part of your mission vocabulary loadout.`;
 }

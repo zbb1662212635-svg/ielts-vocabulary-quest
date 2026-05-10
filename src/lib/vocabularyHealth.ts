@@ -20,6 +20,7 @@ export function normalizeVocabularyItem(item: Partial<VocabularyItem>): Normaliz
   return {
     id: item.id || `word_${word.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
     word,
+    normalizedWord: item.normalizedWord || word.toLowerCase().trim().replace(/\s+/g, " "),
     partOfSpeech: Array.isArray(item.partOfSpeech) ? item.partOfSpeech : [],
     chineseMeaning,
     englishDefinition: item.englishDefinition ?? "",
@@ -29,7 +30,7 @@ export function normalizeVocabularyItem(item: Partial<VocabularyItem>): Normaliz
     sourceLayers:
       Array.isArray(item.sourceLayers) && item.sourceLayers.length
         ? item.sourceLayers
-        : ["topic_vocabulary"],
+        : ["private_vocabulary"],
     examples: Array.isArray(item.examples) ? item.examples : [],
     synonyms: Array.isArray(item.synonyms) ? item.synonyms : [],
     antonyms: Array.isArray(item.antonyms) ? item.antonyms : [],
@@ -43,6 +44,10 @@ export function normalizeVocabularyItem(item: Partial<VocabularyItem>): Normaliz
       pluralRisk: false,
       commonWrongSpellings: [],
     },
+    sourceResourceId: item.sourceResourceId,
+    sourceFileName: item.sourceFileName,
+    sourcePath: item.sourcePath,
+    importWarnings: Array.isArray(item.importWarnings) ? item.importWarnings : [],
   };
 }
 

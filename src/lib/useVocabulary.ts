@@ -5,7 +5,7 @@ import sampleVocabulary from "@/data/vocabulary.sample.json";
 import type { VocabularyItem } from "./types";
 
 type VocabularyResponse = {
-  source: "sample" | "private" | "sample_fallback";
+  source: "sample" | "private" | "sample_fallback" | "emergency";
   metadata?: {
     count?: number;
     source?: string;

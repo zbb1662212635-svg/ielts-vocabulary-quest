@@ -7,7 +7,8 @@
     "dev:sample": "node scripts/set-vocab-source.mjs sample && next dev",
     "dev:private": "node scripts/set-vocab-source.mjs private && next dev",
     "build": "next build",
-    "import:vocab": "python scripts/import-vocab-book.py",
+    "import:vocab": "tsx scripts/import-vocabulary.ts",
+    "import:vocabulary": "tsx scripts/import-vocabulary.ts",
     "import:audio": "tsx scripts/index-resources.ts",
     "import:papers": "tsx scripts/index-resources.ts",
     "import:magazines": "tsx scripts/index-resources.ts",
@@ -26,7 +27,8 @@
     "next": "16.2.6",
     "pdf-parse": "^2.4.5",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

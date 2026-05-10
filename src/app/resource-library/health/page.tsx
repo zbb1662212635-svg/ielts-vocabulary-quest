@@ -5,6 +5,23 @@ import { AlertTriangle, CheckCircle2, FolderSearch } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import type { ResourceHealth } from "@/lib/resourceTypes";
 
+type VocabularyImportHealth = {
+  imported: boolean;
+  totalVocabularyItems: number;
+  usableForLoadout: number;
+  usableForMeaningQuiz: number;
+  usableForDictation: number;
+  usableForSynonymArena: number;
+  needsReviewCount: number;
+  duplicateCount: number;
+  lastImportedAt: string | null;
+  report?: {
+    parsedFiles?: number;
+    unsupportedFiles?: unknown[];
+    topWarnings?: Array<{ warning: string; count: number }>;
+  } | null;
+};
+
 const expectedFolders = [
   "ielts-papers",
   "vocabulary-books",
@@ -18,6 +35,7 @@ const expectedFolders = [
 
 export default function ResourceHealthPage() {
   const [health, setHealth] = useState<ResourceHealth | null>(null);
+  const [vocabHealth, setVocabHealth] = useState<VocabularyImportHealth | null>(null);
 
   useEffect(() => {
     fetch("/api/resource-health")
@@ -37,6 +55,10 @@ export default function ResourceHealthPage() {
           warnings: ["Resource health check failed."],
         }),
       );
+    fetch("/api/vocabulary-import-health")
+      .then((response) => response.json())
+      .then((data: VocabularyImportHealth) => setVocabHealth(data))
+      .catch(() => setVocabHealth(null));
   }, []);
 
   return (
@@ -96,6 +118,34 @@ export default function ResourceHealthPage() {
           })}
         </section>
       )}
+
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Vocabulary Import Health</p>
+        <h2 className="mt-2 text-2xl font-black text-slate-950">词汇导入健康状态</h2>
+        {!vocabHealth ? (
+          <p className="mt-3 text-sm text-slate-600">正在读取词汇导入报告...</p>
+        ) : !vocabHealth.imported ? (
+          <p className="mt-3 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">
+            Private vocabulary has not been imported yet. Run npm run import:vocabulary.
+          </p>
+        ) : (
+          <>
+            <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+              <Stat label="词汇资源文件" value={(health?.byType.ielts_vocabulary ?? 0).toString()} />
+              <Stat label="已解析文件" value={String(vocabHealth.report?.parsedFiles ?? 0)} />
+              <Stat label="不支持文件" value={String(vocabHealth.report?.unsupportedFiles?.length ?? 0)} />
+              <Stat label="词条总数" value={String(vocabHealth.totalVocabularyItems)} />
+              <Stat label="任务词汇可用" value={String(vocabHealth.usableForLoadout)} />
+              <Stat label="释义题可用" value={String(vocabHealth.usableForMeaningQuiz)} />
+              <Stat label="听写可用" value={String(vocabHealth.usableForDictation)} />
+              <Stat label="同义替换可用" value={String(vocabHealth.usableForSynonymArena)} />
+              <Stat label="需复查" value={String(vocabHealth.needsReviewCount)} />
+              <Stat label="已合并重复" value={String(vocabHealth.duplicateCount)} />
+            </div>
+            <p className="mt-4 text-sm text-slate-500">最后导入：{vocabHealth.lastImportedAt ?? "unknown"}</p>
+          </>
+        )}
+      </section>
     </AppShell>
   );
 }
