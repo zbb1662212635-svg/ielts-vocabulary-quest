@@ -1,10 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  ArrowLeft,
+  ArrowRight,
   BookOpenCheck,
   ClipboardList,
   FileText,
@@ -20,15 +22,87 @@ import { detectDictationError, isAnswerCorrect } from "@/lib/normalizer";
 import { getReadingCoachFeedback, readingErrorType } from "@/lib/readingCoach";
 import { applyAttempt } from "@/lib/scoring";
 import { getProgressMap, saveAttempt, saveProgressMap, upsertReviewItem } from "@/lib/storage";
-import type { ErrorType, MissionStage, ReadingQuestion, TrainingAttempt } from "@/lib/types";
+import type { ErrorType, IELTSMission, MissionStage, ReadingQuestion, TrainingAttempt } from "@/lib/types";
+
+const CURRENT_MISSION_ID_KEY = "ielts-mission-lab:currentMissionId";
+const CURRENT_STAGE_KEY = "ielts-mission-lab:currentMissionStage";
+const COMPLETED_STAGES_KEY = "ielts-mission-lab:completedMissionStages";
 
 const stageMeta: Record<MissionStage, { label: string; sublabel: string; icon: LucideIcon }> = {
   mission_brief: { label: "任务简报", sublabel: "进入场景", icon: Target },
-  vocabulary_loadout: { label: "词汇装备", sublabel: "先拿到任务词", icon: PackageCheck },
+  vocabulary_loadout: { label: "词汇装备", sublabel: "任务关键词", icon: PackageCheck },
   listening_scene: { label: "听力场景", sublabel: "听写关键信息", icon: Headphones },
   reading_task: { label: "阅读任务", sublabel: "用证据答题", icon: BookOpenCheck },
   foreign_press_extension: { label: "外刊拓展", sublabel: "长难句和观点", icon: FileText },
   debrief: { label: "任务复盘", sublabel: "错因进入复习", icon: ClipboardList },
+};
+
+const fallbackMission: IELTSMission = {
+  id: "fallback_mission",
+  title: "Sample IELTS Mission",
+  topicRoute: "travel_daily_services",
+  role: "New international student",
+  scenario: "You need to understand a short accommodation notice and complete a simple IELTS-style task.",
+  taskGoal: "Use the sample mission to confirm the learning flow is working.",
+  level: "B1",
+  estimatedMinutes: 15,
+  targetSkills: ["vocabulary", "dictation", "detail_location"],
+  vocabularyIds: ["accommodation"],
+  dictationItemIds: ["accommodation"],
+  readingArticleId: "fallback_reading",
+  foreignPressArticleId: "fallback_press",
+  stages: ["mission_brief", "vocabulary_loadout", "listening_scene", "reading_task", "foreign_press_extension", "debrief"],
+  vocabularyLoadout: [
+    {
+      id: "fallback_vocab_accommodation",
+      word: "accommodation",
+      chineseMeaning: "住宿；住处",
+      englishDefinition: "a place where someone lives or stays",
+      exampleSentence: "Students need to apply for accommodation before the deadline.",
+      synonyms: ["housing"],
+      collocations: ["student accommodation"],
+      ieltsUsageNote: "Listening Part 1 高频拼写词，注意双 c、双 m。",
+      listeningRisk: "Double c and double m.",
+    },
+  ],
+  listeningScene: {
+    title: "Accommodation call",
+    briefing: "Listen and type the keyword you hear.",
+    items: [{ id: "fallback_listen_accommodation", prompt: "住宿关键词", answer: "accommodation", contextNote: "高危拼写词。" }],
+  },
+  readingTask: {
+    id: "fallback_reading",
+    title: "Accommodation Notice",
+    text: "Students must submit their accommodation application before 31 July. A refundable deposit is required after a room has been accepted.",
+    questions: [
+      {
+        id: "fallback_q1",
+        articleId: "fallback_reading",
+        type: "detail_location",
+        prompt: "When must students submit the application?",
+        options: ["Before 31 July", "After a room is accepted", "At the end of the contract", "After 10 p.m."],
+        correctAnswer: "Before 31 July",
+        explanation: "The date is stated directly in the first sentence.",
+        evidenceText: "Students must submit their accommodation application before 31 July.",
+        skillTags: ["detail location"],
+        difficulty: 1,
+      },
+    ],
+  },
+  foreignPressExtension: {
+    title: "Student housing pressure",
+    articleId: "fallback_press",
+    excerpt: "Student housing often becomes difficult when demand rises faster than the supply of affordable rooms.",
+    difficultSentence: {
+      id: "fallback_sentence",
+      articleId: "fallback_press",
+      paragraphId: "fallback_p1",
+      sentence: "Student housing often becomes difficult when demand rises faster than the supply of affordable rooms.",
+      structureNote: "when 引导时间/条件状语，说明住房变难的原因。",
+      chineseExplanation: "当需求增长快于可负担房源供给时，学生住房常常会变得紧张。",
+    },
+    authorViewpoint: "The writer sees student housing as a problem of demand and limited supply.",
+  },
 };
 
 export default function MissionPage() {
@@ -40,10 +114,13 @@ export default function MissionPage() {
 }
 
 function MissionExperience() {
-  const mission = getTodayIELTSMission();
+  const loadedMission = getTodayIELTSMission();
+  const mission = loadedMission ?? fallbackMission;
+  const missionLoadFailed = !loadedMission;
   const route = topicRouteLabels[mission.topicRoute];
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [completedStages, setCompletedStages] = useState<MissionStage[]>(() => readCompletedStages());
   const [vocabAnswers, setVocabAnswers] = useState<Record<string, string>>({});
   const [vocabSubmitted, setVocabSubmitted] = useState<Record<string, boolean>>({});
   const [dictationAnswers, setDictationAnswers] = useState<Record<string, string>>({});
@@ -52,9 +129,30 @@ function MissionExperience() {
   const [readingSubmitted, setReadingSubmitted] = useState<Record<string, boolean>>({});
   const [foreignAnswer, setForeignAnswer] = useState("");
   const [foreignSubmitted, setForeignSubmitted] = useState(false);
+
   const stageParam = searchParams.get("stage");
-  const stageIndex = isMissionStage(stageParam) ? mission.stages.indexOf(stageParam) : 0;
-  const activeStage = mission.stages[stageIndex] ?? mission.stages[0];
+  const activeStage = getActiveStage(stageParam, mission.stages);
+  const stageIndex = Math.max(0, mission.stages.indexOf(activeStage));
+  const progressPercent = Math.round(((stageIndex + 1) / mission.stages.length) * 100);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const savedMissionId = window.localStorage.getItem(CURRENT_MISSION_ID_KEY);
+    const savedStage = window.localStorage.getItem(CURRENT_STAGE_KEY);
+
+    if (!stageParam || !isMissionStage(stageParam) || !mission.stages.includes(stageParam)) {
+      const resumeStage =
+        savedMissionId === mission.id && isMissionStage(savedStage) && mission.stages.includes(savedStage)
+          ? savedStage
+          : "mission_brief";
+      router.replace(`/mission?stage=${resumeStage}`, { scroll: false });
+      return;
+    }
+
+    window.localStorage.setItem(CURRENT_MISSION_ID_KEY, mission.id);
+    window.localStorage.setItem(CURRENT_STAGE_KEY, activeStage);
+  }, [activeStage, mission.id, mission.stages, router, stageParam]);
 
   const vocabResults = useMemo(
     () =>
@@ -123,7 +221,9 @@ function MissionExperience() {
   }
 
   function goToStage(index: number) {
-    const stage = mission.stages[index] ?? mission.stages[0];
+    const stage = mission.stages[index] ?? "mission_brief";
+    persistStageProgress(mission.id, activeStage, stage);
+    setCompletedStages(readCompletedStages());
     router.push(`/mission?stage=${stage}`, { scroll: false });
   }
 
@@ -241,6 +341,12 @@ function MissionExperience() {
   return (
     <AppShell>
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        {missionLoadFailed && (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+            Mission data failed to load. Using sample fallback mission.
+          </div>
+        )}
+
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
           <div>
             <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">
@@ -248,25 +354,47 @@ function MissionExperience() {
             </p>
             <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">{mission.title}</h1>
             <p className="mt-2 text-sm font-bold text-slate-600">
-              你的身份：{mission.role} · {mission.estimatedMinutes} 分钟 · {mission.level}
+              当前阶段：{stageMeta[activeStage].label} · 你的身份：{mission.role} · {mission.estimatedMinutes} 分钟 · {mission.level}
             </p>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-600">{mission.scenario}</p>
           </div>
           <div className="rounded-2xl bg-indigo-50 p-4 text-sm font-bold text-indigo-800">{route.subtitle}</div>
+        </div>
+
+        <div className="mt-6">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500">
+            <span>学习进度</span>
+            <span>{progressPercent}%</span>
+          </div>
+          <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-indigo-600 transition-all" style={{ width: `${progressPercent}%` }} />
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link href="/" className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700">
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </Link>
+          <button onClick={nextStage} className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white">
+            Next Stage
+            <ArrowRight size={16} />
+          </button>
         </div>
       </section>
 
       <div className="mt-6 grid gap-2 md:grid-cols-6">
         {mission.stages.map((stage, index) => {
           const Icon = stageMeta[stage].icon;
+          const completed = completedStages.includes(stage);
           return (
             <button
               key={stage}
               onClick={() => goToStage(index)}
               className={`rounded-2xl border p-4 text-left text-sm font-bold ${
-                index === stageIndex
+                stage === activeStage
                   ? "border-indigo-200 bg-indigo-600 text-white"
-                  : index < stageIndex
+                  : completed
                     ? "border-emerald-100 bg-emerald-50 text-emerald-800"
                     : "border-slate-200 bg-white text-slate-600"
               }`}
@@ -281,10 +409,8 @@ function MissionExperience() {
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         {activeStage === "mission_brief" && (
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Mission Brief</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">任务简报</h2>
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <StageSection eyebrow="Mission Brief" title="任务简报" onNext={nextStage}>
+            <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
               <Panel title="任务目标">{mission.taskGoal}</Panel>
               <div className="rounded-2xl bg-indigo-50 p-5">
                 <div className="text-sm font-black text-indigo-950">本任务训练的 IELTS 能力</div>
@@ -297,15 +423,12 @@ function MissionExperience() {
                 </div>
               </div>
             </div>
-            <PrimaryButton onClick={nextStage}>进入词汇装备</PrimaryButton>
-          </div>
+          </StageSection>
         )}
 
         {activeStage === "vocabulary_loadout" && (
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Vocabulary Loadout</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">词汇装备：先用场景词完成任务准备</h2>
-            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <StageSection eyebrow="Vocabulary Loadout" title="词汇装备：用场景词完成任务准备" onNext={nextStage}>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {vocabResults.map((result) => {
                 const options = [result.correctAnswer, "opposite meaning", "unrelated detail"];
                 return (
@@ -317,9 +440,7 @@ function MissionExperience() {
                       {result.word.exampleSentence}
                     </p>
                     <p className="mt-3 text-sm leading-6 text-slate-600">{result.word.ieltsUsageNote}</p>
-                    <p className="mt-4 text-sm font-bold text-slate-950">
-                      IELTS Reading 中，哪个表达可以替换它？
-                    </p>
+                    <p className="mt-4 text-sm font-bold text-slate-950">IELTS Reading 中，哪个表达可以替换它？</p>
                     <div className="mt-3 grid gap-2">
                       {options.map((option) => (
                         <button
@@ -357,16 +478,13 @@ function MissionExperience() {
                 );
               })}
             </div>
-            <PrimaryButton onClick={nextStage}>进入听力场景</PrimaryButton>
-          </div>
+          </StageSection>
         )}
 
         {activeStage === "listening_scene" && (
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Listening Scene</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">{mission.listeningScene.title}</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">{mission.listeningScene.briefing}</p>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <StageSection eyebrow="Listening Scene" title={mission.listeningScene.title} onNext={nextStage}>
+            <p className="mb-5 text-sm leading-6 text-slate-600">{mission.listeningScene.briefing}</p>
+            <div className="grid gap-4 md:grid-cols-2">
               {dictationResults.map((result) => (
                 <div key={result.item.id} className="rounded-2xl border border-slate-200 p-5">
                   <div className="flex items-center justify-between gap-3">
@@ -408,17 +526,12 @@ function MissionExperience() {
                 </div>
               ))}
             </div>
-            <PrimaryButton onClick={nextStage}>进入阅读任务</PrimaryButton>
-          </div>
+          </StageSection>
         )}
 
         {activeStage === "reading_task" && (
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Reading Task</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">{mission.readingTask.title}</h2>
-            <p className="mt-4 rounded-2xl bg-slate-50 p-5 text-base leading-8 text-slate-800">
-              {mission.readingTask.text}
-            </p>
+          <StageSection eyebrow="Reading Task" title={mission.readingTask.title} onNext={nextStage}>
+            <p className="rounded-2xl bg-slate-50 p-5 text-base leading-8 text-slate-800">{mission.readingTask.text}</p>
             <div className="mt-5 space-y-4">
               {readingResults.map((result) => (
                 <div key={result.question.id} className="rounded-2xl border border-slate-200 p-5">
@@ -462,15 +575,12 @@ function MissionExperience() {
                 </div>
               ))}
             </div>
-            <PrimaryButton onClick={nextStage}>进入外刊拓展</PrimaryButton>
-          </div>
+          </StageSection>
         )}
 
         {activeStage === "foreign_press_extension" && (
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Foreign Press Extension</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">{mission.foreignPressExtension.title}</h2>
-            <p className="mt-4 rounded-2xl bg-slate-50 p-5 text-base leading-8 text-slate-800">
+          <StageSection eyebrow="Foreign Press Extension" title={mission.foreignPressExtension.title} onNext={nextStage}>
+            <p className="rounded-2xl bg-slate-50 p-5 text-base leading-8 text-slate-800">
               {mission.foreignPressExtension.excerpt}
             </p>
             <div className="mt-5 rounded-2xl bg-indigo-50 p-5">
@@ -521,15 +631,12 @@ function MissionExperience() {
                 />
               )}
             </div>
-            <PrimaryButton onClick={nextStage}>生成任务复盘</PrimaryButton>
-          </div>
+          </StageSection>
         )}
 
         {activeStage === "debrief" && (
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-emerald-600">Debrief Report</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">任务完成：{mission.title}</h2>
-            <div className="mt-5 grid gap-4 md:grid-cols-4">
+          <StageSection eyebrow="Debrief Report" title={`任务完成：${mission.title}`} onNext={nextStage} nextLabel="保持在复盘页">
+            <div className="grid gap-4 md:grid-cols-4">
               <ReportStat label="词汇正确率" value={vocabAccuracy} suffix="%" />
               <ReportStat label="听写正确率" value={dictationAccuracy} suffix="%" />
               <ReportStat label="阅读正确率" value={readingAccuracy} suffix="%" />
@@ -544,7 +651,7 @@ function MissionExperience() {
             <Link href="/review" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">
               查看 Review Room
             </Link>
-          </div>
+          </StageSection>
         )}
       </section>
     </AppShell>
@@ -561,14 +668,29 @@ function MissionFallback() {
   );
 }
 
-function isMissionStage(value: string | null): value is MissionStage {
+function StageSection({
+  eyebrow,
+  title,
+  children,
+  onNext,
+  nextLabel = "Next Stage",
+}: {
+  eyebrow: string;
+  title: string;
+  children: ReactNode;
+  onNext: () => void;
+  nextLabel?: string;
+}) {
   return (
-    value === "mission_brief" ||
-    value === "vocabulary_loadout" ||
-    value === "listening_scene" ||
-    value === "reading_task" ||
-    value === "foreign_press_extension" ||
-    value === "debrief"
+    <div>
+      <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">{eyebrow}</p>
+      <h2 className="mt-2 text-2xl font-black text-slate-950">{title}</h2>
+      <div className="mt-5">{children}</div>
+      <button onClick={onNext} className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white">
+        {nextLabel}
+        <ArrowRight size={16} />
+      </button>
+    </div>
   );
 }
 
@@ -578,14 +700,6 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
       <div className="text-sm font-black text-slate-950">{title}</div>
       <p className="mt-2 text-sm leading-7 text-slate-700">{children}</p>
     </div>
-  );
-}
-
-function PrimaryButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="mt-6 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white hover:bg-indigo-700">
-      {children}
-    </button>
   );
 }
 
@@ -603,6 +717,41 @@ function ReportStat({ label, value, suffix = "" }: { label: string; value: numbe
       <div className="mt-1 text-xs font-bold text-slate-500">{label}</div>
     </div>
   );
+}
+
+function getActiveStage(value: string | null, stages: MissionStage[]): MissionStage {
+  if (isMissionStage(value) && stages.includes(value)) return value;
+  return "mission_brief";
+}
+
+function isMissionStage(value: string | null): value is MissionStage {
+  return (
+    value === "mission_brief" ||
+    value === "vocabulary_loadout" ||
+    value === "listening_scene" ||
+    value === "reading_task" ||
+    value === "foreign_press_extension" ||
+    value === "debrief"
+  );
+}
+
+function persistStageProgress(missionId: string, completedStage: MissionStage, nextStage: MissionStage) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(CURRENT_MISSION_ID_KEY, missionId);
+  window.localStorage.setItem(CURRENT_STAGE_KEY, nextStage);
+  const completed = new Set(readCompletedStages());
+  completed.add(completedStage);
+  window.localStorage.setItem(COMPLETED_STAGES_KEY, JSON.stringify([...completed]));
+}
+
+function readCompletedStages(): MissionStage[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(COMPLETED_STAGES_KEY) ?? "[]");
+    return Array.isArray(parsed) ? parsed.filter(isMissionStage) : [];
+  } catch {
+    return [];
+  }
 }
 
 function countSubmitted(items: { submitted: boolean }[]) {

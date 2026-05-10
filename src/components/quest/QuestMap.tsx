@@ -1,22 +1,22 @@
 import { QuestNode } from "./QuestNode";
 
 const themes = [
-  "环境岛 Environment",
-  "教育学院 Education",
-  "科技城 Technology",
-  "健康实验室 Health",
-  "商业港 Business",
-  "政府塔 Government",
-  "学术图书馆 Academic",
-  "听力基地 Listening",
+  "Environment & Nature 环境与自然",
+  "Education & Learning 教育与学习",
+  "Science & Technology 科学与技术",
+  "Health & Lifestyle 健康与生活方式",
+  "Work & Business 工作与商业",
+  "Cities & Transport 城市与交通",
+  "Art & Culture 艺术与文化",
+  "Travel & Daily Services 旅行与日常服务",
 ];
 
 const nodes = [
-  { title: "新词初遇", description: "用雅思例句认识主题词和核心释义。", href: "/mission" },
-  { title: "语境判断", description: "根据句子判断词义和作者态度。", href: "/mission" },
-  { title: "同义替换", description: "训练 Reading paraphrase 识别。", href: "/synonym-arena", active: true },
-  { title: "听写挑战", description: "训练 Listening 拼写准确率。", href: "/dictation", active: true },
-  { title: "Boss 复盘", description: "按错因复习高危词。", href: "/review", active: true },
+  { title: "任务简报", description: "进入一个具体 IELTS 使用场景。", href: "/mission", active: true },
+  { title: "词汇装备", description: "学习本场景需要的核心词和同义替换。", href: "/mission", active: true },
+  { title: "听力场景", description: "用场景关键词训练拼写和听写。", href: "/mission", active: true },
+  { title: "阅读任务", description: "围绕同一场景完成证据定位和题目。", href: "/mission", active: true },
+  { title: "任务复盘", description: "错因进入 Review Room，安排下次复习。", href: "/mission", active: true },
 ];
 
 export function QuestMap() {
@@ -26,13 +26,11 @@ export function QuestMap() {
         <section key={theme} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-indigo-600">
-                阶段 {themeIndex + 1}
-              </p>
+              <p className="text-xs font-bold uppercase tracking-wide text-indigo-600">路线 {themeIndex + 1}</p>
               <h2 className="mt-1 text-xl font-black tracking-tight text-slate-950">{theme}</h2>
             </div>
             <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-              {themeIndex < 2 ? "已解锁" : "预览"}
+              {themeIndex < 2 ? "今日可练" : "预览"}
             </div>
           </div>
           <div className="mt-5 grid gap-3">
