@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { ResourceHealth } from "./resourceTypes";
 
 export const DEFAULT_RESOURCE_ROOT = "C:/Users/zhangbinbin/Desktop/\u5b66\u82f1\u8bed";
 
@@ -25,19 +26,11 @@ const RESOURCE_ALIASES: Record<string, string[]> = {
   "foreign-reading": ["\u5916\u520a"],
 };
 
-export type ResourceHealth = {
-  configured: boolean;
-  root: string;
+export type FolderHealth = {
+  name: string;
+  path: string;
   exists: boolean;
-  status: "configured" | "missing" | "not_found";
-  message: string;
-  folders: Array<{
-    name: string;
-    path: string;
-    exists: boolean;
-    fileCount: number;
-  }>;
-  totalFiles: number;
+  fileCount: number;
 };
 
 export function getResourceRoot(): string {
@@ -58,7 +51,15 @@ export function assertResourceRootExists(): void {
   }
 }
 
-export function getResourceHealth(): ResourceHealth {
+export function getResourceFolderHealth(): {
+  configured: boolean;
+  root: string;
+  exists: boolean;
+  status: "configured" | "missing" | "not_found";
+  message: string;
+  folders: FolderHealth[];
+  totalFiles: number;
+} {
   const configured = Boolean(process.env.LEARNING_RESOURCE_ROOT);
   const root = getResourceRoot();
   const exists = fs.existsSync(root);
@@ -90,6 +91,23 @@ export function getResourceHealth(): ResourceHealth {
     message,
     folders,
     totalFiles: folders.reduce((sum, folder) => sum + folder.fileCount, 0),
+  };
+}
+
+export function getLiveResourceHealth(): ResourceHealth {
+  const folderHealth = getResourceFolderHealth();
+  const scannedAt = new Date().toISOString();
+  return {
+    resourceRoot: folderHealth.root,
+    scannedAt,
+    rootExists: folderHealth.exists,
+    totalFiles: folderHealth.totalFiles,
+    byType: {},
+    byFileKind: {},
+    byFolder: Object.fromEntries(folderHealth.folders.map((folder) => [folder.name, folder.fileCount])),
+    missingExpectedFolders: folderHealth.folders.filter((folder) => !folder.exists).map((folder) => folder.name),
+    detectedExpectedFolders: folderHealth.folders.filter((folder) => folder.exists).map((folder) => folder.name),
+    warnings: folderHealth.exists ? [] : [folderHealth.message],
   };
 }
 

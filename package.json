@@ -8,10 +8,10 @@
     "dev:private": "node scripts/set-vocab-source.mjs private && next dev",
     "build": "next build",
     "import:vocab": "python scripts/import-vocab-book.py",
-    "import:audio": "node scripts/index-resources.mjs --kind audio",
-    "import:papers": "node scripts/index-resources.mjs --kind papers",
-    "import:magazines": "node scripts/index-resources.mjs --kind magazines",
-    "index:resources": "node scripts/index-resources.mjs --kind resources",
+    "import:audio": "tsx scripts/index-resources.ts",
+    "import:papers": "tsx scripts/index-resources.ts",
+    "import:magazines": "tsx scripts/index-resources.ts",
+    "index:resources": "tsx scripts/index-resources.ts",
     "crawl:readings": "node scripts/crawl-readings.mjs",
     "parse:readings": "node scripts/parse-reading-file.mjs",
     "build:reading-sessions": "node scripts/build-reading-sessions.mjs",
@@ -36,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
