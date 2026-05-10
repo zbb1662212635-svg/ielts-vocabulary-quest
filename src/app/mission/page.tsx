@@ -17,92 +17,25 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
-import { getTodayIELTSMission, topicRouteLabels } from "@/data/ielts-missions.sample";
+import { topicRouteLabels } from "@/data/ielts-missions.sample";
+import { getSafeTodayMission, isFallbackMission } from "@/lib/missionLoader";
 import { detectDictationError, isAnswerCorrect } from "@/lib/normalizer";
 import { getReadingCoachFeedback, readingErrorType } from "@/lib/readingCoach";
 import { applyAttempt } from "@/lib/scoring";
 import { getProgressMap, saveAttempt, saveProgressMap, upsertReviewItem } from "@/lib/storage";
-import type { ErrorType, IELTSMission, MissionStage, ReadingQuestion, TrainingAttempt } from "@/lib/types";
+import type { ErrorType, MissionStage, ReadingQuestion, TrainingAttempt } from "@/lib/types";
 
 const CURRENT_MISSION_ID_KEY = "ielts-mission-lab:currentMissionId";
 const CURRENT_STAGE_KEY = "ielts-mission-lab:currentMissionStage";
 const COMPLETED_STAGES_KEY = "ielts-mission-lab:completedMissionStages";
 
-const stageMeta: Record<MissionStage, { label: string; sublabel: string; icon: LucideIcon }> = {
-  mission_brief: { label: "任务简报", sublabel: "进入场景", icon: Target },
-  vocabulary_loadout: { label: "词汇装备", sublabel: "任务关键词", icon: PackageCheck },
-  listening_scene: { label: "听力场景", sublabel: "听写关键信息", icon: Headphones },
-  reading_task: { label: "阅读任务", sublabel: "用证据答题", icon: BookOpenCheck },
-  foreign_press_extension: { label: "外刊拓展", sublabel: "长难句和观点", icon: FileText },
-  debrief: { label: "任务复盘", sublabel: "错因进入复习", icon: ClipboardList },
-};
-
-const fallbackMission: IELTSMission = {
-  id: "fallback_mission",
-  title: "Sample IELTS Mission",
-  topicRoute: "travel_daily_services",
-  role: "New international student",
-  scenario: "You need to understand a short accommodation notice and complete a simple IELTS-style task.",
-  taskGoal: "Use the sample mission to confirm the learning flow is working.",
-  level: "B1",
-  estimatedMinutes: 15,
-  targetSkills: ["vocabulary", "dictation", "detail_location"],
-  vocabularyIds: ["accommodation"],
-  dictationItemIds: ["accommodation"],
-  readingArticleId: "fallback_reading",
-  foreignPressArticleId: "fallback_press",
-  stages: ["mission_brief", "vocabulary_loadout", "listening_scene", "reading_task", "foreign_press_extension", "debrief"],
-  vocabularyLoadout: [
-    {
-      id: "fallback_vocab_accommodation",
-      word: "accommodation",
-      chineseMeaning: "住宿；住处",
-      englishDefinition: "a place where someone lives or stays",
-      exampleSentence: "Students need to apply for accommodation before the deadline.",
-      synonyms: ["housing"],
-      collocations: ["student accommodation"],
-      ieltsUsageNote: "Listening Part 1 高频拼写词，注意双 c、双 m。",
-      listeningRisk: "Double c and double m.",
-    },
-  ],
-  listeningScene: {
-    title: "Accommodation call",
-    briefing: "Listen and type the keyword you hear.",
-    items: [{ id: "fallback_listen_accommodation", prompt: "住宿关键词", answer: "accommodation", contextNote: "高危拼写词。" }],
-  },
-  readingTask: {
-    id: "fallback_reading",
-    title: "Accommodation Notice",
-    text: "Students must submit their accommodation application before 31 July. A refundable deposit is required after a room has been accepted.",
-    questions: [
-      {
-        id: "fallback_q1",
-        articleId: "fallback_reading",
-        type: "detail_location",
-        prompt: "When must students submit the application?",
-        options: ["Before 31 July", "After a room is accepted", "At the end of the contract", "After 10 p.m."],
-        correctAnswer: "Before 31 July",
-        explanation: "The date is stated directly in the first sentence.",
-        evidenceText: "Students must submit their accommodation application before 31 July.",
-        skillTags: ["detail location"],
-        difficulty: 1,
-      },
-    ],
-  },
-  foreignPressExtension: {
-    title: "Student housing pressure",
-    articleId: "fallback_press",
-    excerpt: "Student housing often becomes difficult when demand rises faster than the supply of affordable rooms.",
-    difficultSentence: {
-      id: "fallback_sentence",
-      articleId: "fallback_press",
-      paragraphId: "fallback_p1",
-      sentence: "Student housing often becomes difficult when demand rises faster than the supply of affordable rooms.",
-      structureNote: "when 引导时间/条件状语，说明住房变难的原因。",
-      chineseExplanation: "当需求增长快于可负担房源供给时，学生住房常常会变得紧张。",
-    },
-    authorViewpoint: "The writer sees student housing as a problem of demand and limited supply.",
-  },
+const stageMeta: Record<MissionStage, { label: string; icon: LucideIcon }> = {
+  mission_brief: { label: "任务简报", icon: Target },
+  vocabulary_loadout: { label: "词汇装备", icon: PackageCheck },
+  listening_scene: { label: "听力场景", icon: Headphones },
+  reading_task: { label: "阅读任务", icon: BookOpenCheck },
+  foreign_press_extension: { label: "外刊拓展", icon: FileText },
+  debrief: { label: "任务复盘", icon: ClipboardList },
 };
 
 export default function MissionPage() {
@@ -114,9 +47,7 @@ export default function MissionPage() {
 }
 
 function MissionExperience() {
-  const loadedMission = getTodayIELTSMission();
-  const mission = loadedMission ?? fallbackMission;
-  const missionLoadFailed = !loadedMission;
+  const mission = getSafeTodayMission();
   const route = topicRouteLabels[mission.topicRoute];
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -134,14 +65,16 @@ function MissionExperience() {
   const activeStage = getActiveStage(stageParam, mission.stages);
   const stageIndex = Math.max(0, mission.stages.indexOf(activeStage));
   const progressPercent = Math.round(((stageIndex + 1) / mission.stages.length) * 100);
+  const showDebugWarning = process.env.NODE_ENV === "development" && isFallbackMission(mission);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const savedMissionId = window.localStorage.getItem(CURRENT_MISSION_ID_KEY);
     const savedStage = window.localStorage.getItem(CURRENT_STAGE_KEY);
+    const hasInvalidStage = !stageParam || !isMissionStage(stageParam) || !mission.stages.includes(stageParam);
 
-    if (!stageParam || !isMissionStage(stageParam) || !mission.stages.includes(stageParam)) {
+    if (hasInvalidStage) {
       const resumeStage =
         savedMissionId === mission.id && isMissionStage(savedStage) && mission.stages.includes(savedStage)
           ? savedStage
@@ -150,8 +83,7 @@ function MissionExperience() {
       return;
     }
 
-    window.localStorage.setItem(CURRENT_MISSION_ID_KEY, mission.id);
-    window.localStorage.setItem(CURRENT_STAGE_KEY, activeStage);
+    persistCurrentStage(mission.id, activeStage);
   }, [activeStage, mission.id, mission.stages, router, stageParam]);
 
   const vocabResults = useMemo(
@@ -200,7 +132,6 @@ function MissionExperience() {
 
   const foreignCorrectAnswer = mission.foreignPressExtension.authorViewpoint;
   const foreignIsCorrect = foreignSubmitted && isAnswerCorrect(foreignAnswer, foreignCorrectAnswer);
-
   const vocabAccuracy = percent(countCorrect(vocabResults), countSubmitted(vocabResults));
   const dictationAccuracy = percent(countCorrect(dictationResults), countSubmitted(dictationResults));
   const readingAccuracy = percent(
@@ -216,15 +147,15 @@ function MissionExperience() {
     countCorrect(readingResults) +
     (foreignSubmitted && !foreignIsCorrect ? 1 : 0);
 
-  function nextStage() {
-    goToStage(Math.min(stageIndex + 1, mission.stages.length - 1));
+  function goToStage(index: number) {
+    const nextStage = mission.stages[index] ?? "mission_brief";
+    persistCompletedStage(mission.id, activeStage, nextStage);
+    setCompletedStages(readCompletedStages());
+    router.push(`/mission?stage=${nextStage}`, { scroll: false });
   }
 
-  function goToStage(index: number) {
-    const stage = mission.stages[index] ?? "mission_brief";
-    persistStageProgress(mission.id, activeStage, stage);
-    setCompletedStages(readCompletedStages());
-    router.push(`/mission?stage=${stage}`, { scroll: false });
+  function nextStage() {
+    goToStage(Math.min(stageIndex + 1, mission.stages.length - 1));
   }
 
   function playWord(word: string) {
@@ -237,11 +168,15 @@ function MissionExperience() {
   }
 
   function saveAttemptWithProgress(attempt: TrainingAttempt, errorType?: ErrorType) {
-    const progress = getProgressMap();
-    progress[attempt.wordId] = applyAttempt(progress[attempt.wordId], attempt, errorType);
-    saveProgressMap(progress);
-    saveAttempt(attempt);
-    if (errorType) upsertReviewItem(attempt.wordId, errorType);
+    try {
+      const progress = getProgressMap();
+      progress[attempt.wordId] = applyAttempt(progress[attempt.wordId], attempt, errorType);
+      saveProgressMap(progress);
+      saveAttempt(attempt);
+      if (errorType) upsertReviewItem(attempt.wordId, errorType);
+    } catch (error) {
+      console.warn("Failed to save mission attempt. Continuing without blocking learning.", error);
+    }
   }
 
   function submitVocabulary(wordId: string) {
@@ -341,16 +276,15 @@ function MissionExperience() {
   return (
     <AppShell>
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        {missionLoadFailed && (
+        {showDebugWarning && (
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
-            Mission data failed to load. Using sample fallback mission.
+            Mission data issue detected, fallback mission active.
           </div>
         )}
-
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
           <div>
             <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">
-              今日雅思场景任务 · {route.title}
+              今日雅思场景任务 · {route?.title ?? "Sample Route"}
             </p>
             <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">{mission.title}</h1>
             <p className="mt-2 text-sm font-bold text-slate-600">
@@ -358,7 +292,9 @@ function MissionExperience() {
             </p>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-600">{mission.scenario}</p>
           </div>
-          <div className="rounded-2xl bg-indigo-50 p-4 text-sm font-bold text-indigo-800">{route.subtitle}</div>
+          <div className="rounded-2xl bg-indigo-50 p-4 text-sm font-bold text-indigo-800">
+            {route?.subtitle ?? "样例任务"}
+          </div>
         </div>
 
         <div className="mt-6">
@@ -401,7 +337,6 @@ function MissionExperience() {
             >
               <Icon size={18} />
               <div className="mt-3">{stageMeta[stage].label}</div>
-              <div className="mt-1 text-xs opacity-75">{stageMeta[stage].sublabel}</div>
             </button>
           );
         })}
@@ -735,13 +670,24 @@ function isMissionStage(value: string | null): value is MissionStage {
   );
 }
 
-function persistStageProgress(missionId: string, completedStage: MissionStage, nextStage: MissionStage) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(CURRENT_MISSION_ID_KEY, missionId);
-  window.localStorage.setItem(CURRENT_STAGE_KEY, nextStage);
-  const completed = new Set(readCompletedStages());
-  completed.add(completedStage);
-  window.localStorage.setItem(COMPLETED_STAGES_KEY, JSON.stringify([...completed]));
+function persistCurrentStage(missionId: string, stage: MissionStage) {
+  try {
+    window.localStorage.setItem(CURRENT_MISSION_ID_KEY, missionId);
+    window.localStorage.setItem(CURRENT_STAGE_KEY, stage);
+  } catch (error) {
+    console.warn("Failed to save current mission stage.", error);
+  }
+}
+
+function persistCompletedStage(missionId: string, completedStage: MissionStage, nextStage: MissionStage) {
+  try {
+    persistCurrentStage(missionId, nextStage);
+    const completed = new Set(readCompletedStages());
+    completed.add(completedStage);
+    window.localStorage.setItem(COMPLETED_STAGES_KEY, JSON.stringify([...completed]));
+  } catch (error) {
+    console.warn("Failed to save completed mission stage.", error);
+  }
 }
 
 function readCompletedStages(): MissionStage[] {

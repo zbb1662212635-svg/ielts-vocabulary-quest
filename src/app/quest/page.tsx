@@ -23,7 +23,7 @@ export default function QuestPage() {
         <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">IELTS Topic Routes</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">雅思高频话题任务地图</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          分类按 IELTS 高频话题组织，每条路线都用具体角色、场景和任务目标包装，不再用宽泛学科分类。
+          所有路线都会进入同一个主学习流：/mission。路线地图只是选择和理解任务主题，不会把你带到孤立模块。
         </p>
       </section>
 
@@ -40,12 +40,12 @@ export default function QuestPage() {
                   <p className="mt-3 text-sm font-bold text-slate-700">{mission.title}</p>
                   <p className="mt-2 text-sm leading-6 text-slate-600">{mission.scenario}</p>
                   <Link href="/mission" className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white">
-                    Start route mission
+                    开始路线任务
                     <ArrowRight size={15} />
                   </Link>
                 </>
               ) : (
-                <p className="mt-3 text-sm leading-6 text-slate-500">路线已规划，任务样例将在后续版本加入。</p>
+                <p className="mt-3 text-sm leading-6 text-slate-500">路线已规划，任务样例会在后续版本加入。</p>
               )}
             </div>
           );
