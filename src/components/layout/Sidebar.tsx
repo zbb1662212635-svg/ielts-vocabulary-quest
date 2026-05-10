@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarCheck, Database, LayoutDashboard, Map, Newspaper, RotateCcw, Settings } from "lucide-react";
+import { CalendarCheck, Database, FolderSearch, LayoutDashboard, Map, Newspaper, RotateCcw, Settings } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "学习首页", icon: LayoutDashboard },
   { href: "/mission", label: "今日任务", icon: CalendarCheck },
   { href: "/quest", label: "任务地图", icon: Map },
   { href: "/reading-lab", label: "外刊素材库", icon: Newspaper },
+  { href: "/resource-library/health", label: "资源健康", icon: FolderSearch },
   { href: "/review", label: "错因复盘", icon: RotateCcw },
   { href: "/settings", label: "设置与数据", icon: Settings },
 ];
