@@ -9,7 +9,7 @@
     "build": "next build",
     "import:vocab": "tsx scripts/import-vocabulary.ts",
     "import:vocabulary": "tsx scripts/import-vocabulary.ts",
-    "import:audio": "tsx scripts/index-resources.ts",
+    "import:audio": "tsx scripts/import-audio.ts",
     "import:papers": "tsx scripts/index-resources.ts",
     "import:magazines": "tsx scripts/index-resources.ts",
     "index:resources": "tsx scripts/index-resources.ts",

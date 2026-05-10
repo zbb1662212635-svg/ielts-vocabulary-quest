@@ -165,7 +165,7 @@ function discoverFallbackResources(input: string): LearningResource[] {
       type: "ielts_vocabulary",
       fileKind: "unknown",
       absolutePath: normalizePath(filePath),
-      relativePath: normalizePath(path.relative(resourceRoot, filePath)),
+      relativePath: normalizeSlashes(path.relative(resourceRoot, filePath)),
       folder: "vocabulary-books",
       sizeBytes: stat.size,
       modifiedAt: stat.mtime.toISOString(),
@@ -563,6 +563,10 @@ function cleanTitle(value: string): string {
 
 function normalizePath(value: string): string {
   return path.resolve(value.replace(/^"|"$/g, "")).replace(/\\/g, "/");
+}
+
+function normalizeSlashes(value: string): string {
+  return value.replace(/\\/g, "/");
 }
 
 function writeJson(filePath: string, payload: unknown) {

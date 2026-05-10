@@ -23,7 +23,8 @@ import { detectDictationError, isAnswerCorrect } from "@/lib/normalizer";
 import { getReadingCoachFeedback, readingErrorType } from "@/lib/readingCoach";
 import { applyAttempt } from "@/lib/scoring";
 import { getProgressMap, saveAttempt, saveProgressMap, upsertReviewItem } from "@/lib/storage";
-import type { ErrorType, IELTSMission, MissionStage, ReadingQuestion, TrainingAttempt, VocabularyItem } from "@/lib/types";
+import type { DictationItem, ErrorType, IELTSMission, MissionStage, ReadingQuestion, TrainingAttempt, VocabularyItem } from "@/lib/types";
+import { useDictationItems } from "@/lib/useDictationItems";
 import { useVocabulary } from "@/lib/useVocabulary";
 
 const CURRENT_MISSION_ID_KEY = "ielts-mission-lab:currentMissionId";
@@ -49,7 +50,11 @@ export default function MissionPage() {
 
 function MissionExperience() {
   const vocabularyData = useVocabulary();
-  const mission = useMemo(() => enrichMissionWithVocabulary(getSafeTodayMission(), vocabularyData.items), [vocabularyData.items]);
+  const privateDictationItems = useDictationItems();
+  const mission = useMemo(
+    () => enrichMissionWithVocabulary(getSafeTodayMission(), vocabularyData.items, privateDictationItems),
+    [privateDictationItems, vocabularyData.items],
+  );
   const route = topicRouteLabels[mission.topicRoute];
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -160,7 +165,22 @@ function MissionExperience() {
     goToStage(Math.min(stageIndex + 1, mission.stages.length - 1));
   }
 
-  function playWord(word: string) {
+  function playWord(word: string, audioId?: string, start?: number, end?: number) {
+    if (audioId && typeof window !== "undefined") {
+      const audio = new Audio(`/api/audio/${audioId}`);
+      if (typeof start === "number") audio.currentTime = start;
+      if (typeof end === "number") {
+        audio.addEventListener("timeupdate", () => {
+          if (audio.currentTime >= end) audio.pause();
+        });
+      }
+      audio.play().catch(() => playTts(word));
+      return;
+    }
+    playTts(word);
+  }
+
+  function playTts(word: string) {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(word);
@@ -427,7 +447,7 @@ function MissionExperience() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-sm font-black text-slate-950">{result.item.prompt}</div>
                     <button
-                      onClick={() => playWord(result.item.answer)}
+                      onClick={() => playWord(result.item.answer, result.item.audioId, result.item.audioStart, result.item.audioEnd)}
                       className="rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white"
                     >
                       <Radio size={16} className="mr-1 inline" />
@@ -715,7 +735,7 @@ function percent(correct: number, total: number) {
   return Math.round((correct / total) * 100);
 }
 
-function enrichMissionWithVocabulary(mission: IELTSMission, vocabulary: VocabularyItem[]): IELTSMission {
+function enrichMissionWithVocabulary(mission: IELTSMission, vocabulary: VocabularyItem[], dictationItems: DictationItem[]): IELTSMission {
   if (!vocabulary.length) return mission;
   const selected = selectMissionVocabulary(mission, vocabulary, 10);
   if (!selected.length) return mission;
@@ -732,7 +752,20 @@ function enrichMissionWithVocabulary(mission: IELTSMission, vocabulary: Vocabula
     listeningRisk: item.listeningRisk?.spellingRisk ? "High-risk spelling word for IELTS Listening." : undefined,
   }));
 
-  const dictationItems = selectDictationVocabulary(mission, vocabulary, 6).map((item) => ({
+  const privateItems = selectMissionDictationItems(mission, dictationItems, 6).map((item) => ({
+    id: item.id,
+    prompt: item.chineseMeaning ? `Listen and type: ${item.chineseMeaning}` : `Listen and type the ${item.itemType}`,
+    answer: item.answer,
+    contextNote:
+      item.source === "vocabulary_fallback"
+        ? "This item comes from your private vocabulary because transcripts are not available yet."
+        : "This item comes from your private listening transcript.",
+    audioId: item.audioId,
+    audioStart: item.audioStart,
+    audioEnd: item.audioEnd,
+  }));
+
+  const vocabularyItems = selectDictationVocabulary(mission, vocabulary, 6).map((item) => ({
     id: `dictation_${item.id}`,
     prompt: `Listen and type the IELTS word: ${item.chineseMeaning || item.word}`,
     answer: item.word,
@@ -746,9 +779,16 @@ function enrichMissionWithVocabulary(mission: IELTSMission, vocabulary: Vocabula
     vocabularyLoadout,
     listeningScene: {
       ...mission.listeningScene,
-      items: dictationItems.length ? dictationItems : mission.listeningScene.items,
+      items: privateItems.length ? privateItems : vocabularyItems.length ? vocabularyItems : mission.listeningScene.items,
     },
   };
+}
+
+function selectMissionDictationItems(mission: IELTSMission, items: DictationItem[], count: number) {
+  const ready = items.filter((item) => item.status === "ready");
+  const topicMatched = ready.filter((item) => item.topicTags.includes(mission.topicRoute));
+  const pool = topicMatched.length >= count ? topicMatched : [...topicMatched, ...ready.filter((item) => !topicMatched.includes(item))];
+  return pool.slice(0, count);
 }
 
 function selectMissionVocabulary(mission: IELTSMission, vocabulary: VocabularyItem[], count: number) {

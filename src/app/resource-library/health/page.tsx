@@ -22,6 +22,21 @@ type VocabularyImportHealth = {
   } | null;
 };
 
+type ListeningImportHealth = {
+  imported: boolean;
+  audioTracks: number;
+  transcripts: number;
+  matchedPairs: number;
+  unmatchedAudio: number;
+  unmatchedTranscripts: number;
+  dictationItems: number;
+  needsReview: number;
+  lastImportedAt: string | null;
+  report?: {
+    warnings?: string[];
+  } | null;
+};
+
 const expectedFolders = [
   "ielts-papers",
   "vocabulary-books",
@@ -36,6 +51,7 @@ const expectedFolders = [
 export default function ResourceHealthPage() {
   const [health, setHealth] = useState<ResourceHealth | null>(null);
   const [vocabHealth, setVocabHealth] = useState<VocabularyImportHealth | null>(null);
+  const [listeningHealth, setListeningHealth] = useState<ListeningImportHealth | null>(null);
 
   useEffect(() => {
     fetch("/api/resource-health")
@@ -59,6 +75,10 @@ export default function ResourceHealthPage() {
       .then((response) => response.json())
       .then((data: VocabularyImportHealth) => setVocabHealth(data))
       .catch(() => setVocabHealth(null));
+    fetch("/api/listening-health")
+      .then((response) => response.json())
+      .then((data: ListeningImportHealth) => setListeningHealth(data))
+      .catch(() => setListeningHealth(null));
   }, []);
 
   return (
@@ -143,6 +163,36 @@ export default function ResourceHealthPage() {
               <Stat label="已合并重复" value={String(vocabHealth.duplicateCount)} />
             </div>
             <p className="mt-4 text-sm text-slate-500">最后导入：{vocabHealth.lastImportedAt ?? "unknown"}</p>
+          </>
+        )}
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Audio Import Health</p>
+        <h2 className="mt-2 text-2xl font-black text-slate-950">听力资源导入状态</h2>
+        {!listeningHealth ? (
+          <p className="mt-3 text-sm text-slate-600">正在读取音频导入报告...</p>
+        ) : !listeningHealth.imported ? (
+          <p className="mt-3 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">
+            Audio has not been imported yet. Run npm run import:audio.
+          </p>
+        ) : (
+          <>
+            <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+              <Stat label="音频文件" value={String(listeningHealth.audioTracks)} />
+              <Stat label="Transcript 文件" value={String(listeningHealth.transcripts)} />
+              <Stat label="已匹配音频" value={String(listeningHealth.matchedPairs)} />
+              <Stat label="未匹配音频" value={String(listeningHealth.unmatchedAudio)} />
+              <Stat label="未匹配 Transcript" value={String(listeningHealth.unmatchedTranscripts)} />
+              <Stat label="听写题" value={String(listeningHealth.dictationItems)} />
+              <Stat label="需复查" value={String(listeningHealth.needsReview)} />
+            </div>
+            {listeningHealth.report?.warnings?.length ? (
+              <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">
+                {listeningHealth.report.warnings[0]}
+              </p>
+            ) : null}
+            <p className="mt-4 text-sm text-slate-500">最后导入：{listeningHealth.lastImportedAt ?? "unknown"}</p>
           </>
         )}
       </section>

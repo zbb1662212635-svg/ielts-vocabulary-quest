@@ -15,6 +15,9 @@ export type ErrorType =
   | "wrong_synonym"
   | "spelling_error"
   | "plural_error"
+  | "spacing_error"
+  | "hyphen_error"
+  | "word_order_error"
   | "word_family_error"
   | "context_misread"
   | "listening_not_recognized"
@@ -477,6 +480,9 @@ export type MissionListeningItem = {
   prompt: string;
   answer: string;
   contextNote: string;
+  audioId?: string;
+  audioStart?: number;
+  audioEnd?: number;
 };
 
 export type MissionReadingPassage = {
@@ -515,4 +521,76 @@ export type IELTSMission = {
     difficultSentence: DifficultSentence;
     authorViewpoint: string;
   };
+};
+
+export type AudioFileFormat = "mp3" | "m4a" | "wav" | "flac" | "aac" | "unknown";
+
+export type TranscriptFormat = "txt" | "md" | "srt" | "vtt" | "json" | "csv" | "unknown";
+
+export type AudioTrack = {
+  id: string;
+  title: string;
+  fileName: string;
+  extension: string;
+  format: AudioFileFormat;
+  absolutePath: string;
+  relativePath: string;
+  sizeBytes: number;
+  modifiedAt: string;
+  importedAt: string;
+  durationSeconds?: number;
+  sourceResourceId?: string;
+  matchedTranscriptId?: string;
+  topicTags: IELTSTopicRoute[];
+  skillTags: ("listening" | "dictation" | "spelling")[];
+  status: "indexed" | "matched" | "ready" | "needs_review";
+  warnings: string[];
+};
+
+export type Transcript = {
+  id: string;
+  title: string;
+  fileName: string;
+  format: TranscriptFormat;
+  absolutePath: string;
+  relativePath: string;
+  text: string;
+  segments: TranscriptSegment[];
+  matchedAudioId?: string;
+  topicTags: IELTSTopicRoute[];
+  skillTags: ("listening" | "reading" | "dictation")[];
+  status: "indexed" | "parsed" | "matched" | "ready" | "needs_review";
+  warnings: string[];
+};
+
+export type TranscriptSegment = {
+  id: string;
+  transcriptId: string;
+  audioId?: string;
+  index: number;
+  startTime?: number;
+  endTime?: number;
+  speaker?: string;
+  text: string;
+};
+
+export type DictationItem = {
+  id: string;
+  audioId?: string;
+  transcriptId?: string;
+  segmentId?: string;
+  text: string;
+  answer: string;
+  acceptableAnswers?: string[];
+  chineseMeaning?: string;
+  audioStart?: number;
+  audioEnd?: number;
+  topicTags: IELTSTopicRoute[];
+  skillTags: ("listening" | "dictation" | "spelling")[];
+  difficulty: 1 | 2 | 3 | 4 | 5;
+  itemType: "word" | "phrase" | "sentence" | "number" | "date" | "address" | "name" | "form_field";
+  source: "private_audio" | "private_transcript" | "vocabulary_fallback" | "sample";
+  commonMistakes?: string[];
+  status: "ready" | "needs_review";
+  warnings: string[];
 };

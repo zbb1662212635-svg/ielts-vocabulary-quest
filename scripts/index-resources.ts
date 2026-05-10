@@ -180,7 +180,7 @@ function toResourceItem(filePath: string, sourceFolder: string, resourceRoot: st
   const fileKind = inferFileKind(extension);
   const folder = inferEffectiveFolder(sourceFolder, fileKind);
   const title = cleanTitle(path.basename(fileName, extension));
-  const relativePath = normalizePath(path.relative(resourceRoot, filePath));
+  const relativePath = normalizeSlashes(path.relative(resourceRoot, filePath));
   const warnings = buildWarnings(filePath, fileKind, stat.size);
   return {
     id: stableId(relativePath),
@@ -281,6 +281,10 @@ function countBy<T>(items: T[], getter: (item: T) => string): Record<string, num
 
 function normalizePath(value: string): string {
   return path.resolve(value.replace(/^"|"$/g, "")).replace(/\\/g, "/");
+}
+
+function normalizeSlashes(value: string): string {
+  return value.replace(/\\/g, "/");
 }
 
 function writeJson(filePath: string, payload: unknown) {

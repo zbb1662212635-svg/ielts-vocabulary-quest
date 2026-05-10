@@ -11,13 +11,15 @@ import { applyAttempt } from "@/lib/scoring";
 import { DEFAULT_SETTINGS, getAppSettings } from "@/lib/settings";
 import { getProgressMap, saveAttempt, saveProgressMap, upsertReviewItem } from "@/lib/storage";
 import { getTutorFeedback } from "@/lib/tutor";
-import type { AppSettings, ErrorType, ListeningSurvivalItem, TrainingAttempt, VocabularyItem } from "@/lib/types";
+import type { AppSettings, DictationItem, ErrorType, ListeningSurvivalItem, TrainingAttempt, VocabularyItem } from "@/lib/types";
+import { useDictationItems } from "@/lib/useDictationItems";
 import { useVocabulary } from "@/lib/useVocabulary";
 
 type DictationQuestion = {
   id: string;
   word: string;
   tip: string;
+  audioId?: string;
 };
 
 type Result = {
@@ -30,6 +32,7 @@ type Result = {
 
 export default function DictationPage() {
   const vocabulary = useVocabulary();
+  const privateDictation = useDictationItems();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
@@ -37,6 +40,14 @@ export default function DictationPage() {
   }, []);
 
   const questions = useMemo<DictationQuestion[]>(() => {
+    const generated = privateDictation.map((item: DictationItem) => ({
+      id: item.id,
+      word: item.answer,
+      tip: item.source === "vocabulary_fallback" ? "来自你的私有词库；当前没有 transcript，使用 TTS 兜底。" : "来自本地 transcript 听写题。",
+      audioId: item.audioId,
+    }));
+    if (generated.length) return generated.slice(0, settings.dailyMission.dictationItemsPerDay);
+
     const listening = listeningData as ListeningSurvivalItem[];
     const activeVocabulary = vocabulary.items.length ? vocabulary.items : (vocabularyData as VocabularyItem[]);
     const vocab = activeVocabulary
@@ -52,7 +63,7 @@ export default function DictationPage() {
       0,
       settings.dailyMission.dictationItemsPerDay,
     );
-  }, [settings.dailyMission.dictationItemsPerDay, vocabulary.items]);
+  }, [privateDictation, settings.dailyMission.dictationItemsPerDay, vocabulary.items]);
 
   const [index, setIndex] = useState(0);
   const [results, setResults] = useState<Result[]>([]);
@@ -154,6 +165,7 @@ export default function DictationPage() {
             key={question.id + index}
             word={question.word}
             tip={question.tip}
+            audioSrc={question.audioId ? `/api/audio/${question.audioId}` : undefined}
             disabled={Boolean(currentResult)}
             accent={settings.dictation.accent}
             playbackSpeed={settings.dictation.playbackSpeed}

@@ -1,12 +1,8 @@
 import type { ErrorType } from "./types";
+import { detectDictationErrorType, normalizeDictationAnswer } from "./dictationScoring";
 
 export function normalizeAnswer(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/[，。！？；：]/g, "")
-    .replace(/[.,!?;:]/g, "")
-    .replace(/\s+/g, " ");
+  return normalizeDictationAnswer(input);
 }
 
 export function isAnswerCorrect(userAnswer: string, correctAnswer: string): boolean {
@@ -22,6 +18,5 @@ export function detectDictationError(userAnswer: string, correctAnswer: string):
   const normalizedCorrect = normalizeAnswer(correctAnswer);
 
   if (normalizedUser === normalizedCorrect) return undefined;
-  if (isPluralMistake(normalizedUser, normalizedCorrect)) return "plural_error";
-  return "spelling_error";
+  return detectDictationErrorType(normalizedUser, normalizedCorrect);
 }
