@@ -1,0 +1,7 @@
+[
+  { "id": "col_reduce_emissions", "phrase": "reduce emissions", "chineseMeaning": "减少排放", "topicTags": ["environment"], "example": "Governments are under pressure to reduce emissions." },
+  { "id": "col_conduct_research", "phrase": "conduct research", "chineseMeaning": "开展研究", "topicTags": ["academic"], "example": "The team conducted research into sleep patterns." },
+  { "id": "col_pose_threat", "phrase": "pose a threat", "chineseMeaning": "构成威胁", "topicTags": ["environment", "health"], "example": "Air pollution poses a threat to public health." },
+  { "id": "col_reach_conclusion", "phrase": "reach a conclusion", "chineseMeaning": "得出结论", "topicTags": ["academic"], "example": "The researchers reached a conclusion after comparing the data." },
+  { "id": "col_make_reservation", "phrase": "make a reservation", "chineseMeaning": "进行预订", "topicTags": ["listening"], "example": "I would like to make a reservation for two people." }
+]

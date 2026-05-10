@@ -1,0 +1,26 @@
+[
+  {
+    "id": "awesome_english_ebooks",
+    "name": "Awesome English Ebooks",
+    "type": "github_repo",
+    "repoOwner": "hehonghui",
+    "repoName": "awesome-english-ebooks",
+    "branch": "master",
+    "baseUrl": "https://github.com/hehonghui/awesome-english-ebooks",
+    "enabled": false,
+    "allowedPaths": [
+      "01_economist",
+      "02_new_yorker",
+      "04_atlantic",
+      "05_wired"
+    ],
+    "allowedExtensions": [".epub", ".pdf", ".mobi", ".txt", ".md"],
+    "licenseInfo": {
+      "sourceRepo": "hehonghui/awesome-english-ebooks",
+      "sourceUrl": "https://github.com/hehonghui/awesome-english-ebooks",
+      "crawledAt": "",
+      "branch": "master",
+      "notes": "User must confirm they have the right to import and use this source for personal study."
+    }
+  }
+]

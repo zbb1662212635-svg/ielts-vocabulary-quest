@@ -1,0 +1,92 @@
+[
+  {
+    "id": "syn_reduce_cut_down",
+    "stemWord": "reduce",
+    "targetSynonyms": ["cut down", "decrease", "lower", "curb"],
+    "distractors": ["increase", "remain", "consume"],
+    "topicTags": ["environment", "general_academic"],
+    "difficulty": 2,
+    "example": { "questionStem": "The policy aims to reduce pollution.", "passagePhrase": "The policy is designed to curb pollution." }
+  },
+  {
+    "id": "syn_resemble_similar",
+    "stemWord": "resemble",
+    "targetSynonyms": ["be similar to", "look like", "share features with"],
+    "distractors": ["replace", "remove", "remain"],
+    "topicTags": ["general_academic"],
+    "difficulty": 2,
+    "example": { "questionStem": "The new structure resembles earlier designs.", "passagePhrase": "The new structure is similar to earlier designs." }
+  },
+  {
+    "id": "syn_show_indicate",
+    "stemWord": "show",
+    "targetSynonyms": ["indicate", "reveal", "demonstrate", "suggest"],
+    "distractors": ["hide", "prevent", "ignore"],
+    "topicTags": ["general_academic"],
+    "difficulty": 2,
+    "example": { "questionStem": "The results show a clear trend.", "passagePhrase": "The findings indicate a clear trend." }
+  },
+  {
+    "id": "syn_important_significant",
+    "stemWord": "important",
+    "targetSynonyms": ["significant", "crucial", "essential", "major"],
+    "distractors": ["minor", "temporary", "recent"],
+    "topicTags": ["general_academic"],
+    "difficulty": 2,
+    "example": { "questionStem": "Transport is an important issue.", "passagePhrase": "Transport is a significant issue." }
+  },
+  {
+    "id": "syn_change_modify",
+    "stemWord": "change",
+    "targetSynonyms": ["alter", "modify", "adjust", "adapt"],
+    "distractors": ["maintain", "repeat", "remove"],
+    "topicTags": ["general_academic"],
+    "difficulty": 2,
+    "example": { "questionStem": "The researchers changed the method.", "passagePhrase": "The researchers modified the method." }
+  },
+  {
+    "id": "syn_help_facilitate",
+    "stemWord": "help",
+    "targetSynonyms": ["facilitate", "enable", "contribute to", "support"],
+    "distractors": ["block", "damage", "replace"],
+    "topicTags": ["education", "technology"],
+    "difficulty": 3,
+    "example": { "questionStem": "Technology helps students learn independently.", "passagePhrase": "Technology enables students to learn independently." }
+  },
+  {
+    "id": "syn_problem_issue",
+    "stemWord": "problem",
+    "targetSynonyms": ["issue", "challenge", "concern", "difficulty"],
+    "distractors": ["benefit", "method", "survey"],
+    "topicTags": ["general_academic"],
+    "difficulty": 1,
+    "example": { "questionStem": "Noise is a problem in urban areas.", "passagePhrase": "Noise is a major issue in cities." }
+  },
+  {
+    "id": "syn_result_outcome",
+    "stemWord": "result",
+    "targetSynonyms": ["outcome", "consequence", "effect", "finding"],
+    "distractors": ["cause", "method", "sample"],
+    "topicTags": ["general_academic"],
+    "difficulty": 2,
+    "example": { "questionStem": "The result was unexpected.", "passagePhrase": "The outcome was unexpected." }
+  },
+  {
+    "id": "syn_buy_purchase",
+    "stemWord": "buy",
+    "targetSynonyms": ["purchase", "obtain", "acquire"],
+    "distractors": ["sell", "borrow", "avoid"],
+    "topicTags": ["business"],
+    "difficulty": 1,
+    "example": { "questionStem": "Visitors can buy tickets online.", "passagePhrase": "Visitors can purchase tickets online." }
+  },
+  {
+    "id": "syn_harmful_damaging",
+    "stemWord": "harmful",
+    "targetSynonyms": ["damaging", "detrimental", "negative"],
+    "distractors": ["useful", "stable", "ordinary"],
+    "topicTags": ["environment", "health"],
+    "difficulty": 3,
+    "example": { "questionStem": "The chemical is harmful to wildlife.", "passagePhrase": "The chemical is detrimental to wildlife." }
+  }
+]

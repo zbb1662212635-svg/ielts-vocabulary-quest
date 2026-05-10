@@ -1,0 +1,12 @@
+[
+  { "id": "listen_february", "word": "February", "category": "months", "commonWrongSpellings": ["Febuary"], "audioText": "February", "difficulty": 2, "tip": "The first r is often missed." },
+  { "id": "listen_wednesday", "word": "Wednesday", "category": "days", "commonWrongSpellings": ["Wensday", "Wednsday"], "audioText": "Wednesday", "difficulty": 2, "tip": "Wednesday is frequently misspelled." },
+  { "id": "listen_accommodation", "word": "accommodation", "category": "housing", "commonWrongSpellings": ["acommodation", "accomodation"], "audioText": "accommodation", "difficulty": 3, "tip": "Double c and double m." },
+  { "id": "listen_reservation", "word": "reservation", "category": "travel", "commonWrongSpellings": ["resavation"], "audioText": "reservation", "difficulty": 2, "tip": "Listen for the middle -er-va- sound." },
+  { "id": "listen_appointment", "word": "appointment", "category": "booking", "commonWrongSpellings": ["apointment"], "audioText": "appointment", "difficulty": 2, "tip": "Double p at the start." },
+  { "id": "listen_conference", "word": "conference", "category": "campus", "commonWrongSpellings": ["confrence"], "audioText": "conference", "difficulty": 2, "tip": "Keep the middle e." },
+  { "id": "listen_laboratory", "word": "laboratory", "category": "campus", "commonWrongSpellings": ["labaratory"], "audioText": "laboratory", "difficulty": 3, "tip": "British speech may reduce the middle syllable." },
+  { "id": "listen_membership", "word": "membership", "category": "services", "commonWrongSpellings": ["membship"], "audioText": "membership", "difficulty": 2, "tip": "Remember member + ship." },
+  { "id": "listen_deposit", "word": "deposit", "category": "money", "commonWrongSpellings": ["deposite"], "audioText": "deposit", "difficulty": 2, "tip": "No final e." },
+  { "id": "listen_library", "word": "library", "category": "campus", "commonWrongSpellings": ["libary"], "audioText": "library", "difficulty": 2, "tip": "The first r is easy to miss." }
+]

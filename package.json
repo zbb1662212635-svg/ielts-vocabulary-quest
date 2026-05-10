@@ -1,0 +1,37 @@
+{
+  "name": "ielts-vocabulary-quest",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "dev:sample": "node scripts/set-vocab-source.mjs sample && next dev",
+    "dev:private": "node scripts/set-vocab-source.mjs private && next dev",
+    "build": "next build",
+    "import:vocab": "python scripts/import-vocab-book.py",
+    "crawl:readings": "node scripts/crawl-readings.mjs",
+    "parse:readings": "node scripts/parse-reading-file.mjs",
+    "build:reading-sessions": "node scripts/build-reading-sessions.mjs",
+    "sync:readings": "npm run crawl:readings && npm run build:reading-sessions",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.7.3",
+    "jszip": "^3.10.1",
+    "lucide-react": "^1.14.0",
+    "next": "16.2.6",
+    "pdf-parse": "^2.4.5",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

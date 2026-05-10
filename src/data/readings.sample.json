@@ -1,0 +1,453 @@
+[
+  {
+    "id": "sample_printing_press_circulation",
+    "sourceFileId": "sample_source_printing",
+    "title": "The Printing Press and the Circulation of Knowledge",
+    "subtitle": "How a technology changed the speed of ideas",
+    "author": "IELTS Vocabulary Quest",
+    "publication": "Sample Reading Lab",
+    "publishedAt": "2026-05-10",
+    "sourceUrl": "local-sample",
+    "topicTags": ["technology", "history", "knowledge", "society"],
+    "interestRoute": "technology_civilization",
+    "level": "B2",
+    "estimatedMinutes": 22,
+    "wordCount": 589,
+    "summary": "The article explains that printing mattered not only as a machine for cheaper books, but as an infrastructure that changed how ideas moved through society.",
+    "paragraphs": [
+      {
+        "id": "print_p1",
+        "articleId": "sample_printing_press_circulation",
+        "index": 1,
+        "text": "The printing press is often introduced as a simple story of invention: a machine appeared, books became cheaper, and Europe became more literate. This version is not wrong, but it is incomplete. What made printing historically important was not only the mechanical reproduction of pages. It was the creation of a new system for circulating knowledge. Once texts could be copied in larger numbers, ideas could move beyond monasteries, courts and small scholarly circles.",
+        "mainIdea": "Printing changed the circulation of ideas, not only book production.",
+        "functionTag": "background"
+      },
+      {
+        "id": "print_p2",
+        "articleId": "sample_printing_press_circulation",
+        "index": 2,
+        "text": "Before printed books became common, manuscripts had to be copied by hand. This process was slow, expensive and vulnerable to error. A university teacher might have access to a few important texts, while a merchant or craftsman might see very few books at all. Printing did not instantly create universal education, but it altered the conditions under which literacy could expand. Schools, churches and commercial publishers all began to operate in a world where written material was easier to reproduce.",
+        "mainIdea": "Printing lowered barriers to textual access and literacy.",
+        "functionTag": "contrast"
+      },
+      {
+        "id": "print_p3",
+        "articleId": "sample_printing_press_circulation",
+        "index": 3,
+        "text": "The social impact of this shift was uneven. Some regions developed active markets for pamphlets, scientific books and religious arguments, while others remained dependent on traditional authorities. Nevertheless, the speed of circulation mattered. A debate that once travelled through private letters could now be reproduced and discussed in several cities. For historians of science, this helps explain why observations, diagrams and experimental reports became easier to compare.",
+        "mainIdea": "The effects varied, but faster circulation changed public debate and science.",
+        "functionTag": "claim"
+      },
+      {
+        "id": "print_p4",
+        "articleId": "sample_printing_press_circulation",
+        "index": 4,
+        "text": "It would be misleading to say that printing alone caused the Reformation or modern science. Economic incentives, political protection and educational institutions were also necessary. Yet printing gave these forces a medium through which they could become visible. It made disagreement more durable, because arguments could be preserved and answered. It also made authority more contested, because readers could compare different versions of a claim.",
+        "mainIdea": "Printing interacted with institutions and made authority more contested.",
+        "functionTag": "contrast"
+      },
+      {
+        "id": "print_p5",
+        "articleId": "sample_printing_press_circulation",
+        "index": 5,
+        "text": "For IELTS Reading, the topic is useful because it connects technology with social change. Words such as diffusion, circulation, reproduce, authority and institution often appear in academic passages. They also form common paraphrase chains: spread may become diffusion, copy may become reproduce, and influence may become impact. Understanding these links helps a reader locate information quickly and avoid treating every unfamiliar word as a new idea.",
+        "mainIdea": "The topic trains IELTS paraphrase recognition.",
+        "functionTag": "conclusion"
+      }
+    ],
+    "keyVocabulary": [
+      {
+        "id": "print_v_diffusion",
+        "articleId": "sample_printing_press_circulation",
+        "paragraphId": "print_p5",
+        "word": "diffusion",
+        "chineseMeaning": "传播；扩散",
+        "englishDefinition": "the process by which ideas or things spread",
+        "sourceSentence": "Words such as diffusion, circulation, reproduce, authority and institution often appear in academic passages.",
+        "synonyms": ["spread", "circulation"],
+        "topicTags": ["technology", "society"],
+        "skillTags": ["reading"],
+        "addToVocabularyQuest": true
+      },
+      {
+        "id": "print_v_authority",
+        "articleId": "sample_printing_press_circulation",
+        "paragraphId": "print_p4",
+        "word": "authority",
+        "chineseMeaning": "权威；权力",
+        "sourceSentence": "It also made authority more contested, because readers could compare different versions of a claim.",
+        "synonyms": ["power", "legitimacy"],
+        "topicTags": ["society", "history"],
+        "skillTags": ["reading"],
+        "addToVocabularyQuest": true
+      }
+    ],
+    "difficultSentences": [
+      {
+        "id": "print_s1",
+        "articleId": "sample_printing_press_circulation",
+        "paragraphId": "print_p4",
+        "sentence": "Yet printing gave these forces a medium through which they could become visible.",
+        "structureNote": "through which 引导定语从句，修饰 medium。",
+        "chineseExplanation": "印刷术为这些力量提供了一种媒介，使它们能够被看见、传播和回应。",
+        "targetGrammar": ["relative clause", "abstract noun"]
+      }
+    ],
+    "questions": [
+      {
+        "id": "print_q1",
+        "articleId": "sample_printing_press_circulation",
+        "paragraphId": "print_p1",
+        "type": "main_idea",
+        "prompt": "What is the main point of paragraph 1?",
+        "options": ["Printing was only a cheaper way to make books.", "Printing created a new system for circulating knowledge.", "Monasteries printed most early books.", "Europe became literate immediately."],
+        "correctAnswer": "Printing created a new system for circulating knowledge.",
+        "explanation": "The paragraph says the common invention story is incomplete and emphasizes circulation of knowledge.",
+        "evidenceText": "What made printing historically important was not only the mechanical reproduction of pages. It was the creation of a new system for circulating knowledge.",
+        "skillTags": ["main idea"],
+        "difficulty": 2
+      },
+      {
+        "id": "print_q2",
+        "articleId": "sample_printing_press_circulation",
+        "paragraphId": "print_p5",
+        "type": "synonym",
+        "prompt": "In the article, which word is closest to 'spread'?",
+        "options": ["diffusion", "authority", "manuscript", "incentive"],
+        "correctAnswer": "diffusion",
+        "explanation": "The article explicitly builds the paraphrase chain spread -> diffusion.",
+        "evidenceText": "spread may become diffusion",
+        "skillTags": ["paraphrase"],
+        "difficulty": 1
+      },
+      {
+        "id": "print_q3",
+        "articleId": "sample_printing_press_circulation",
+        "paragraphId": "print_p4",
+        "type": "tfng",
+        "prompt": "True / False / Not Given: The article claims printing alone caused modern science.",
+        "options": ["True", "False", "Not Given"],
+        "correctAnswer": "False",
+        "explanation": "The paragraph says it would be misleading to say printing alone caused modern science.",
+        "evidenceText": "It would be misleading to say that printing alone caused the Reformation or modern science.",
+        "skillTags": ["TFNG"],
+        "difficulty": 2
+      },
+      {
+        "id": "print_q4",
+        "articleId": "sample_printing_press_circulation",
+        "paragraphId": "print_p4",
+        "type": "author_attitude",
+        "prompt": "What is the author's attitude toward simple invention stories?",
+        "options": ["They are useful but incomplete.", "They are always false.", "They are more accurate than social explanations.", "They should replace historical analysis."],
+        "correctAnswer": "They are useful but incomplete.",
+        "explanation": "The opening says the simple version is not wrong but incomplete.",
+        "evidenceText": "This version is not wrong, but it is incomplete.",
+        "skillTags": ["author attitude"],
+        "difficulty": 3
+      },
+      {
+        "id": "print_q5",
+        "articleId": "sample_printing_press_circulation",
+        "paragraphId": "print_p2",
+        "type": "sentence_completion",
+        "prompt": "Complete the idea: Before printing, manuscripts were slow, expensive and vulnerable to ____.",
+        "options": ["error", "trade", "industry", "security"],
+        "correctAnswer": "error",
+        "explanation": "The paragraph gives the exact phrase: vulnerable to error.",
+        "evidenceText": "This process was slow, expensive and vulnerable to error.",
+        "skillTags": ["detail location"],
+        "difficulty": 1
+      }
+    ],
+    "importedAt": "2026-05-10T00:00:00.000Z",
+    "readingStatus": "not_started"
+  },
+  {
+    "id": "sample_states_alliances",
+    "sourceFileId": "sample_source_alliances",
+    "title": "Why States Form Alliances",
+    "subtitle": "Security, influence and the risks of cooperation",
+    "author": "IELTS Vocabulary Quest",
+    "publication": "Sample Reading Lab",
+    "publishedAt": "2026-05-10",
+    "sourceUrl": "local-sample",
+    "topicTags": ["international politics", "security", "diplomacy"],
+    "interestRoute": "world_order_power",
+    "level": "B2",
+    "estimatedMinutes": 24,
+    "wordCount": 541,
+    "summary": "The article explains that alliances are strategic arrangements that can increase security but also create obligations and risks.",
+    "paragraphs": [
+      {
+        "id": "alliance_p1",
+        "articleId": "sample_states_alliances",
+        "index": 1,
+        "text": "Alliances are often described as friendships between states, but this language can be misleading. In international politics, an alliance is usually a strategic arrangement. Governments cooperate because they believe that cooperation will make them safer, stronger or more influential. The emotional language of friendship may appear in speeches, yet the underlying logic is usually connected to security and interest.",
+        "mainIdea": "Alliances are strategic, not merely friendly relationships.",
+        "functionTag": "claim"
+      },
+      {
+        "id": "alliance_p2",
+        "articleId": "sample_states_alliances",
+        "index": 2,
+        "text": "A small state may seek an alliance with a powerful country because it fears pressure from a neighbour. A powerful state may form alliances to maintain influence in a region or to prevent a rival from becoming dominant. In both cases, the alliance is a way of managing uncertainty. It signals that an attack on one member may produce a response from others.",
+        "mainIdea": "States form alliances to manage insecurity and influence.",
+        "functionTag": "example"
+      },
+      {
+        "id": "alliance_p3",
+        "articleId": "sample_states_alliances",
+        "index": 3,
+        "text": "However, alliances can also create problems. A government that promises support may later be drawn into a conflict it did not choose. It may also discover that its partner has different priorities. For this reason, treaties often contain careful language about obligations, consultation and limits. Diplomacy continues after an alliance is formed because cooperation must be interpreted and adjusted over time.",
+        "mainIdea": "Alliances create obligations and require continuing diplomacy.",
+        "functionTag": "contrast"
+      },
+      {
+        "id": "alliance_p4",
+        "articleId": "sample_states_alliances",
+        "index": 4,
+        "text": "This is why sovereignty remains important. Even when states cooperate closely, they normally want to preserve the authority to make their own decisions. An alliance that offers protection but removes too much independence may become politically unpopular. The balance between security and autonomy is therefore central to understanding why alliances succeed or fail.",
+        "mainIdea": "Alliances must balance security with sovereignty.",
+        "functionTag": "conclusion"
+      }
+    ],
+    "keyVocabulary": [
+      {
+        "id": "alliance_v_sovereignty",
+        "articleId": "sample_states_alliances",
+        "paragraphId": "alliance_p4",
+        "word": "sovereignty",
+        "chineseMeaning": "主权",
+        "sourceSentence": "This is why sovereignty remains important.",
+        "synonyms": ["independence", "authority"],
+        "topicTags": ["politics"],
+        "skillTags": ["reading"],
+        "addToVocabularyQuest": true
+      },
+      {
+        "id": "alliance_v_obligations",
+        "articleId": "sample_states_alliances",
+        "paragraphId": "alliance_p3",
+        "word": "obligations",
+        "chineseMeaning": "义务；责任",
+        "sourceSentence": "Treaties often contain careful language about obligations, consultation and limits.",
+        "synonyms": ["duties", "responsibilities"],
+        "topicTags": ["politics"],
+        "skillTags": ["reading"],
+        "addToVocabularyQuest": true
+      }
+    ],
+    "difficultSentences": [
+      {
+        "id": "alliance_s1",
+        "articleId": "sample_states_alliances",
+        "paragraphId": "alliance_p3",
+        "sentence": "A government that promises support may later be drawn into a conflict it did not choose.",
+        "structureNote": "that promises support 是定语从句，it did not choose 修饰 conflict。",
+        "chineseExplanation": "一个承诺提供支持的政府，后来可能会被卷入一场它本来没有选择参与的冲突。",
+        "targetGrammar": ["relative clause", "passive voice"]
+      }
+    ],
+    "questions": [
+      {
+        "id": "alliance_q1",
+        "articleId": "sample_states_alliances",
+        "paragraphId": "alliance_p1",
+        "type": "main_idea",
+        "prompt": "What is the main idea of paragraph 1?",
+        "options": ["Alliances are mainly emotional friendships.", "Alliances are strategic arrangements based on security and interest.", "Speeches are the most important part of diplomacy.", "States avoid cooperation."],
+        "correctAnswer": "Alliances are strategic arrangements based on security and interest.",
+        "explanation": "The paragraph contrasts friendship language with strategic logic.",
+        "evidenceText": "In international politics, an alliance is usually a strategic arrangement.",
+        "skillTags": ["main idea"],
+        "difficulty": 2
+      },
+      {
+        "id": "alliance_q2",
+        "articleId": "sample_states_alliances",
+        "paragraphId": "alliance_p4",
+        "type": "synonym",
+        "prompt": "Which word is closest to 'independence' in paragraph 4?",
+        "options": ["autonomy", "consultation", "pressure", "rival"],
+        "correctAnswer": "autonomy",
+        "explanation": "Autonomy means the ability to make decisions independently.",
+        "evidenceText": "The balance between security and autonomy",
+        "skillTags": ["paraphrase"],
+        "difficulty": 2
+      },
+      {
+        "id": "alliance_q3",
+        "articleId": "sample_states_alliances",
+        "paragraphId": "alliance_p3",
+        "type": "tfng",
+        "prompt": "True / False / Not Given: The article says alliances never create problems.",
+        "options": ["True", "False", "Not Given"],
+        "correctAnswer": "False",
+        "explanation": "Paragraph 3 explicitly states that alliances can create problems.",
+        "evidenceText": "However, alliances can also create problems.",
+        "skillTags": ["TFNG"],
+        "difficulty": 1
+      },
+      {
+        "id": "alliance_q4",
+        "articleId": "sample_states_alliances",
+        "paragraphId": "alliance_p3",
+        "type": "author_attitude",
+        "prompt": "What does the author suggest about diplomacy after an alliance is formed?",
+        "options": ["It becomes unnecessary.", "It continues because cooperation needs adjustment.", "It only happens before treaties.", "It removes all conflicts."],
+        "correctAnswer": "It continues because cooperation needs adjustment.",
+        "explanation": "The author says diplomacy continues after an alliance because cooperation must be interpreted and adjusted.",
+        "evidenceText": "Diplomacy continues after an alliance is formed because cooperation must be interpreted and adjusted over time.",
+        "skillTags": ["author attitude"],
+        "difficulty": 3
+      }
+    ],
+    "importedAt": "2026-05-10T00:00:00.000Z",
+    "readingStatus": "not_started"
+  },
+  {
+    "id": "sample_urbanization_social_change",
+    "sourceFileId": "sample_source_urbanization",
+    "title": "Urbanization and Social Change",
+    "subtitle": "Why cities alter work, identity and public services",
+    "author": "IELTS Vocabulary Quest",
+    "publication": "Sample Reading Lab",
+    "publishedAt": "2026-05-10",
+    "sourceUrl": "local-sample",
+    "topicTags": ["society", "urbanization", "migration", "inequality"],
+    "interestRoute": "society_ideas",
+    "level": "B2",
+    "estimatedMinutes": 20,
+    "wordCount": 523,
+    "summary": "The article treats urbanization as a broad social transformation rather than a simple movement from countryside to city.",
+    "paragraphs": [
+      {
+        "id": "urban_p1",
+        "articleId": "sample_urbanization_social_change",
+        "index": 1,
+        "text": "Urbanization is often defined as the movement of people from rural areas to cities. This definition is useful, but it hides the deeper social changes that cities produce. When people move into dense urban environments, they encounter new forms of work, education, transport and public authority. Daily life becomes less dependent on extended family networks and more dependent on institutions.",
+        "mainIdea": "Urbanization creates institutional and social changes beyond migration.",
+        "functionTag": "background"
+      },
+      {
+        "id": "urban_p2",
+        "articleId": "sample_urbanization_social_change",
+        "index": 2,
+        "text": "Cities can increase opportunity. A young person in a large city may have access to schools, hospitals, libraries and employers that were unavailable in a village. This access can support social mobility, especially when public services are reliable. Urban life also creates cultural contact. People from different regions, classes and occupations meet in markets, workplaces and neighbourhoods.",
+        "mainIdea": "Cities can create opportunity and social mobility.",
+        "functionTag": "claim"
+      },
+      {
+        "id": "urban_p3",
+        "articleId": "sample_urbanization_social_change",
+        "index": 3,
+        "text": "Yet the benefits of urbanization are not automatic. Housing may become expensive, transport may become crowded and informal workers may lack security. In some cities, inequality becomes more visible because wealth and poverty exist side by side. A new road or subway line can improve mobility for some groups while raising rents for others.",
+        "mainIdea": "Urban growth can intensify inequality and insecurity.",
+        "functionTag": "contrast"
+      },
+      {
+        "id": "urban_p4",
+        "articleId": "sample_urbanization_social_change",
+        "index": 4,
+        "text": "For this reason, researchers rarely treat urbanization as a purely demographic process. They study how infrastructure, employment, housing and public services shape the experience of city life. The important question is not only how many people live in cities, but how urban systems distribute opportunity and risk.",
+        "mainIdea": "Researchers focus on how urban systems distribute opportunity and risk.",
+        "functionTag": "conclusion"
+      }
+    ],
+    "keyVocabulary": [
+      {
+        "id": "urban_v_mobility",
+        "articleId": "sample_urbanization_social_change",
+        "paragraphId": "urban_p2",
+        "word": "mobility",
+        "chineseMeaning": "流动性；社会上升机会",
+        "sourceSentence": "This access can support social mobility, especially when public services are reliable.",
+        "synonyms": ["movement", "advancement"],
+        "topicTags": ["society"],
+        "skillTags": ["reading"],
+        "addToVocabularyQuest": true
+      },
+      {
+        "id": "urban_v_infrastructure",
+        "articleId": "sample_urbanization_social_change",
+        "paragraphId": "urban_p4",
+        "word": "infrastructure",
+        "chineseMeaning": "基础设施",
+        "sourceSentence": "They study how infrastructure, employment, housing and public services shape the experience of city life.",
+        "synonyms": ["public systems", "facilities"],
+        "topicTags": ["society"],
+        "skillTags": ["reading"],
+        "addToVocabularyQuest": true
+      }
+    ],
+    "difficultSentences": [
+      {
+        "id": "urban_s1",
+        "articleId": "sample_urbanization_social_change",
+        "paragraphId": "urban_p4",
+        "sentence": "The important question is not only how many people live in cities, but how urban systems distribute opportunity and risk.",
+        "structureNote": "not only...but... 连接两个 how 引导的名词性从句。",
+        "chineseExplanation": "关键问题不仅是有多少人生活在城市里，而是城市系统如何分配机会和风险。",
+        "targetGrammar": ["not only but also", "noun clause"]
+      }
+    ],
+    "questions": [
+      {
+        "id": "urban_q1",
+        "articleId": "sample_urbanization_social_change",
+        "paragraphId": "urban_p1",
+        "type": "main_idea",
+        "prompt": "What does paragraph 1 suggest about urbanization?",
+        "options": ["It is only a change of location.", "It changes people's relationship with institutions.", "It removes the need for public authority.", "It only affects transport."],
+        "correctAnswer": "It changes people's relationship with institutions.",
+        "explanation": "The paragraph says city life becomes more dependent on institutions.",
+        "evidenceText": "Daily life becomes less dependent on extended family networks and more dependent on institutions.",
+        "skillTags": ["main idea"],
+        "difficulty": 2
+      },
+      {
+        "id": "urban_q2",
+        "articleId": "sample_urbanization_social_change",
+        "paragraphId": "urban_p2",
+        "type": "synonym",
+        "prompt": "Which phrase is closest to 'social mobility'?",
+        "options": ["movement between social positions", "public transport only", "rural isolation", "housing shortage"],
+        "correctAnswer": "movement between social positions",
+        "explanation": "Social mobility refers to movement or advancement in social position.",
+        "evidenceText": "This access can support social mobility",
+        "skillTags": ["paraphrase"],
+        "difficulty": 2
+      },
+      {
+        "id": "urban_q3",
+        "articleId": "sample_urbanization_social_change",
+        "paragraphId": "urban_p3",
+        "type": "tfng",
+        "prompt": "True / False / Not Given: The article says urbanization automatically benefits everyone.",
+        "options": ["True", "False", "Not Given"],
+        "correctAnswer": "False",
+        "explanation": "The article says the benefits are not automatic and then lists problems.",
+        "evidenceText": "Yet the benefits of urbanization are not automatic.",
+        "skillTags": ["TFNG"],
+        "difficulty": 1
+      },
+      {
+        "id": "urban_q4",
+        "articleId": "sample_urbanization_social_change",
+        "paragraphId": "urban_p4",
+        "type": "paragraph_function",
+        "prompt": "What is the function of paragraph 4?",
+        "options": ["It summarizes a research perspective.", "It gives a personal story.", "It rejects all public services.", "It defines migration only."],
+        "correctAnswer": "It summarizes a research perspective.",
+        "explanation": "The paragraph begins 'For this reason, researchers...' and explains what they study.",
+        "evidenceText": "researchers rarely treat urbanization as a purely demographic process",
+        "skillTags": ["paragraph function"],
+        "difficulty": 3
+      }
+    ],
+    "importedAt": "2026-05-10T00:00:00.000Z",
+    "readingStatus": "not_started"
+  }
+]

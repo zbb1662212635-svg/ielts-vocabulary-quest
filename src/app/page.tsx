@@ -1,0 +1,155 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  BookOpenCheck,
+  ClipboardList,
+  FileText,
+  Headphones,
+  PackageCheck,
+  Target,
+} from "lucide-react";
+import { SkillRadar } from "@/components/dashboard/SkillRadar";
+import { AppShell } from "@/components/layout/AppShell";
+import { getTodayIELTSMission, topicRouteLabels } from "@/data/ielts-missions.sample";
+import { buildSkillMetrics } from "@/lib/scoring";
+import { DEFAULT_SETTINGS, getAppSettings } from "@/lib/settings";
+import { getAttempts, getReviewItems } from "@/lib/storage";
+import type { AppSettings, ReviewItem, TrainingAttempt } from "@/lib/types";
+
+const flowCards = [
+  {
+    title: "词汇装备",
+    text: "先获得本场景需要的核心词、同义替换和搭配。",
+    icon: PackageCheck,
+  },
+  {
+    title: "听力场景",
+    text: "用英音 TTS 完成关键词听写，拼写错误会进入复盘。",
+    icon: Headphones,
+  },
+  {
+    title: "阅读任务",
+    text: "围绕同一场景完成主旨、细节定位和句子填空。",
+    icon: BookOpenCheck,
+  },
+  {
+    title: "外刊拓展",
+    text: "用短外刊材料训练长难句、作者观点和真实语境。",
+    icon: FileText,
+  },
+  {
+    title: "任务复盘",
+    text: "汇总正确率、错因和下一次 Review Room 复习项目。",
+    icon: ClipboardList,
+  },
+];
+
+export default function DashboardPage() {
+  const mission = getTodayIELTSMission();
+  const route = topicRouteLabels[mission.topicRoute];
+  const [attempts, setAttempts] = useState<TrainingAttempt[]>([]);
+  const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setAttempts(getAttempts());
+      setReviewItems(getReviewItems());
+      setSettings(getAppSettings());
+    });
+  }, []);
+
+  const metrics = useMemo(() => buildSkillMetrics(attempts), [attempts]);
+
+  return (
+    <AppShell>
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="grid gap-6 p-6 lg:grid-cols-[1.35fr_0.85fr] lg:p-8">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">
+              <Target size={14} />
+              目标：IELTS Listening {settings.studyGoal.targetListeningBand} / Reading {settings.studyGoal.targetReadingBand}
+            </div>
+            <p className="mt-5 text-sm font-bold uppercase tracking-wide text-indigo-600">今日雅思沉浸式任务</p>
+            <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-950">{mission.title}</h1>
+            <p className="mt-3 text-base font-bold text-slate-700">
+              {route.subtitle} · 你的身份：{mission.role} · {mission.estimatedMinutes} 分钟
+            </p>
+            <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">{mission.scenario}</p>
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-600">
+              今天不是分开刷单词、听力和阅读，而是在一个真实 IELTS 场景里完成一整套任务：先拿到词汇装备，再听写关键信息，随后读材料、做题、拆长难句，最后生成复盘。
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/mission"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700"
+              >
+                开始今日任务
+                <ArrowRight size={17} />
+              </Link>
+              <Link
+                href="/quest"
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:border-indigo-200"
+              >
+                查看 IELTS 任务路线
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-slate-50 p-5">
+            <div className="text-sm font-black text-slate-950">今日任务流程</div>
+            <div className="mt-4 space-y-3">
+              {flowCards.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.title} className="flex items-start gap-3 rounded-2xl bg-white px-4 py-3">
+                    <Icon className="mt-0.5 text-indigo-600" size={18} />
+                    <div>
+                      <div className="text-sm font-black text-slate-950">{item.title}</div>
+                      <div className="mt-1 text-xs leading-5 text-slate-500">{item.text}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 grid gap-4 md:grid-cols-4">
+        <StatusCard label="今日精选复习" value={Math.min(reviewItems.length, settings.review.dailyReviewCap)} />
+        <StatusCard label="目标学习分钟" value={settings.studyGoal.dailyStudyMinutes} />
+        <StatusCard label="场景词汇" value={mission.vocabularyLoadout.length} />
+        <StatusCard label="阅读题目" value={mission.readingTask.questions.length} />
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start gap-3">
+          <PackageCheck className="mt-1 text-indigo-600" size={22} />
+          <div>
+            <h2 className="text-2xl font-black text-slate-950">为什么这样学习</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              系统把雅思高频场景、词汇、听写、阅读题和外刊拓展放在同一个任务目标里。你不是在四个页面之间来回选择，而是在一个英文使用场景中完成任务，所有错误都会自动进入 Review Room。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="mt-6">
+        <SkillRadar metrics={metrics} />
+      </div>
+    </AppShell>
+  );
+}
+
+function StatusCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="text-3xl font-black text-slate-950">{value}</div>
+      <div className="mt-1 text-xs font-bold text-slate-500">{label}</div>
+    </div>
+  );
+}
