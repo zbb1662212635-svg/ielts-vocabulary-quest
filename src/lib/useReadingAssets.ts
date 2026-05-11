@@ -3,29 +3,43 @@
 import { useEffect, useState } from "react";
 import type { IELTSReadingQuestion, ReadingAnswerKey, ReadingPassage } from "./types";
 
+type ReadingAssetsState = {
+  passages: ReadingPassage[];
+  questions: IELTSReadingQuestion[];
+  answerKeys: ReadingAnswerKey[];
+};
+
+const emptyAssets: ReadingAssetsState = { passages: [], questions: [], answerKeys: [] };
+
 export function useReadingAssets() {
-  const [assets, setAssets] = useState<{
-    passages: ReadingPassage[];
-    questions: IELTSReadingQuestion[];
-    answerKeys: ReadingAnswerKey[];
-  }>({ passages: [], questions: [], answerKeys: [] });
+  const [assets, setAssets] = useState<ReadingAssetsState>(emptyAssets);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/reading-assets")
-      .then((response) => response.json())
-      .then((data) => {
+
+    async function loadReadingAssets() {
+      try {
+        const response = await fetch("/api/reading-assets");
+        if (!response.ok) throw new Error(`Reading assets API failed: ${response.status}`);
+
+        const data: unknown = await response.json();
+        const record = data as Partial<ReadingAssetsState>;
+
         if (!cancelled) {
           setAssets({
-            passages: data.passages ?? [],
-            questions: data.questions ?? [],
-            answerKeys: data.answerKeys ?? [],
+            passages: Array.isArray(record.passages) ? record.passages : [],
+            questions: Array.isArray(record.questions) ? record.questions : [],
+            answerKeys: Array.isArray(record.answerKeys) ? record.answerKeys : [],
           });
         }
-      })
-      .catch(() => {
-        if (!cancelled) setAssets({ passages: [], questions: [], answerKeys: [] });
-      });
+      } catch (error) {
+        console.warn("Reading assets failed to load. Continuing with mission fallback reading.", error);
+        if (!cancelled) setAssets(emptyAssets);
+      }
+    }
+
+    loadReadingAssets();
+
     return () => {
       cancelled = true;
     };

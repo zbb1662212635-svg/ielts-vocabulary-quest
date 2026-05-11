@@ -76,20 +76,25 @@ function MissionExperience() {
   const readingAssets = useReadingAssets();
   const scenarioData = useScenarioReadings();
   const generatedMission = useGeneratedMission();
+  const vocabularyItems = useMemo(() => (Array.isArray(vocabularyData.items) ? vocabularyData.items : []), [vocabularyData.items]);
+  const dictationItems = useMemo(() => (Array.isArray(privateDictationItems) ? privateDictationItems : []), [privateDictationItems]);
+  const readingPassages = useMemo(() => (Array.isArray(readingAssets.passages) ? readingAssets.passages : []), [readingAssets.passages]);
+  const readingQuestions = useMemo(() => (Array.isArray(readingAssets.questions) ? readingAssets.questions : []), [readingAssets.questions]);
+  const scenarioArticles = useMemo(() => (Array.isArray(scenarioData.articles) ? scenarioData.articles : []), [scenarioData.articles]);
 
   const baseMission = useMemo(
     () =>
       enrichMissionWithReading(
-        enrichMissionWithVocabulary(generatedMission.mission, vocabularyData.items, privateDictationItems),
-        readingAssets.passages,
-        readingAssets.questions,
+        enrichMissionWithVocabulary(generatedMission.mission, vocabularyItems, dictationItems),
+        readingPassages,
+        readingQuestions,
       ),
-    [generatedMission.mission, privateDictationItems, readingAssets.passages, readingAssets.questions, vocabularyData.items],
+    [generatedMission.mission, dictationItems, readingPassages, readingQuestions, vocabularyItems],
   );
-  const scenarioArticle = useMemo(() => selectScenarioArticle(baseMission, scenarioData.articles), [baseMission, scenarioData.articles]);
+  const scenarioArticle = useMemo(() => selectScenarioArticle(baseMission, scenarioArticles), [baseMission, scenarioArticles]);
   const mission = useMemo(() => enrichMissionWithScenario(baseMission, scenarioArticle), [baseMission, scenarioArticle]);
 
-  const route = topicRouteLabels[mission.topicRoute];
+  const route = topicRouteLabels[mission.topicRoute] ?? topicRouteLabels.travel_daily_services;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [completedStages, setCompletedStages] = useState<MissionStage[]>(() => readCompletedStages());
@@ -106,7 +111,7 @@ function MissionExperience() {
   const stageParam = searchParams.get("stage");
   const activeStage = getActiveStage(stageParam, mission.stages);
   const stageIndex = Math.max(0, mission.stages.indexOf(activeStage));
-  const progressPercent = Math.round(((stageIndex + 1) / mission.stages.length) * 100);
+  const progressPercent = mission.stages.length ? Math.round(((stageIndex + 1) / mission.stages.length) * 100) : 0;
   const showDebugWarning = process.env.NODE_ENV === "development" && isFallbackMission(mission);
 
   useEffect(() => {
@@ -183,7 +188,9 @@ function MissionExperience() {
     countCorrect(readingResults);
 
   function goToStage(index: number) {
-    const nextStage = mission.stages[index] ?? "mission_brief";
+    const stages = mission.stages.length ? mission.stages : (["mission_brief"] as MissionStage[]);
+    const safeIndex = Math.max(0, Math.min(index, stages.length - 1));
+    const nextStage = stages[safeIndex] ?? "mission_brief";
     persistCompletedStage(mission.id, activeStage, nextStage);
     setCompletedStages(readCompletedStages());
     router.push(`/mission?stage=${nextStage}`, { scroll: false });
@@ -731,8 +738,9 @@ function SaveLine({ title, text, saved, onSave }: { title: string; text: string;
 }
 
 function getActiveStage(value: string | null, stages: MissionStage[]): MissionStage {
-  if (isMissionStage(value) && stages.includes(value)) return value;
-  return "mission_brief";
+  const safeStages = stages.length ? stages : (["mission_brief"] as MissionStage[]);
+  if (isMissionStage(value) && safeStages.includes(value)) return value;
+  return safeStages.includes("mission_brief") ? "mission_brief" : safeStages[0] ?? "mission_brief";
 }
 
 function isMissionStage(value: string | null): value is MissionStage {

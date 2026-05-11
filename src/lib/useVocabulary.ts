@@ -14,29 +14,57 @@ type VocabularyResponse = {
   items: VocabularyItem[];
 };
 
+const sampleItems = sampleVocabulary as VocabularyItem[];
+
+function fallbackVocabulary(note = "Using bundled sample vocabulary."): VocabularyResponse {
+  return {
+    source: "sample_fallback",
+    metadata: { count: sampleItems.length, source: "sample", note },
+    items: sampleItems,
+  };
+}
+
+function isVocabularyResponse(value: unknown): value is VocabularyResponse {
+  if (!value || typeof value !== "object") return false;
+  return Array.isArray((value as { items?: unknown }).items);
+}
+
 export function useVocabulary() {
   const [data, setData] = useState<VocabularyResponse>({
     source: "sample",
-    metadata: { count: (sampleVocabulary as VocabularyItem[]).length, source: "sample" },
-    items: sampleVocabulary as VocabularyItem[],
+    metadata: { count: sampleItems.length, source: "sample" },
+    items: sampleItems,
   });
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/vocabulary")
-      .then((response) => response.json() as Promise<VocabularyResponse>)
-      .then((payload) => {
-        if (!cancelled) setData(payload);
-      })
-      .catch(() => {
+
+    async function loadVocabulary() {
+      try {
+        const response = await fetch("/api/vocabulary");
+        if (!response.ok) throw new Error(`Vocabulary API failed: ${response.status}`);
+
+        const payload: unknown = await response.json();
+        if (!isVocabularyResponse(payload)) {
+          if (!cancelled) setData(fallbackVocabulary("Vocabulary API returned an invalid payload."));
+          return;
+        }
+
         if (!cancelled) {
           setData({
-            source: "sample_fallback",
-            metadata: { count: (sampleVocabulary as VocabularyItem[]).length, source: "sample" },
-            items: sampleVocabulary as VocabularyItem[],
+            source: payload.source ?? "sample_fallback",
+            metadata: payload.metadata ?? { count: payload.items.length, source: payload.source },
+            items: payload.items.length ? payload.items : sampleItems,
           });
         }
-      });
+      } catch (error) {
+        console.warn("Vocabulary data failed to load. Falling back to sample data.", error);
+        if (!cancelled) setData(fallbackVocabulary("Vocabulary API failed; using sample data."));
+      }
+    }
+
+    loadVocabulary();
+
     return () => {
       cancelled = true;
     };
