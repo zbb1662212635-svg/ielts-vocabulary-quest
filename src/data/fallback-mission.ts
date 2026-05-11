@@ -5,8 +5,7 @@ export const fallbackMission: IELTSMission = {
   title: "Sample IELTS Mission",
   topicRoute: "travel_daily_services",
   role: "New international student",
-  scenario:
-    "You need to understand a short accommodation notice and complete a simple IELTS-style learning task.",
+  scenario: "You need to understand a short accommodation notice and complete a simple IELTS-style learning task.",
   taskGoal: "Use this sample mission to confirm the learning flow is working from start to finish.",
   level: "B1",
   estimatedMinutes: 15,
@@ -15,14 +14,7 @@ export const fallbackMission: IELTSMission = {
   dictationItemIds: ["accommodation"],
   readingArticleId: "fallback_reading",
   foreignPressArticleId: "fallback_press",
-  stages: [
-    "mission_brief",
-    "vocabulary_loadout",
-    "listening_scene",
-    "reading_task",
-    "foreign_press_extension",
-    "debrief",
-  ],
+  stages: ["mission_brief", "vocabulary_loadout", "listening_scene", "reading_task", "foreign_press_extension", "debrief"],
   vocabularyLoadout: [
     {
       id: "fallback_vocab_accommodation",
@@ -71,15 +63,13 @@ export const fallbackMission: IELTSMission = {
   foreignPressExtension: {
     title: "Student housing pressure",
     articleId: "fallback_press",
-    excerpt:
-      "Student housing often becomes difficult when demand rises faster than the supply of affordable rooms.",
+    excerpt: "Student housing often becomes difficult when demand rises faster than the supply of affordable rooms.",
     difficultSentence: {
       id: "fallback_sentence",
       articleId: "fallback_press",
       paragraphId: "fallback_p1",
-      sentence:
-        "Student housing often becomes difficult when demand rises faster than the supply of affordable rooms.",
-      structureNote: "when 引导时间/条件状语，说明住房变难的原因。",
+      sentence: "Student housing often becomes difficult when demand rises faster than the supply of affordable rooms.",
+      structureNote: "when 引导时间/条件状语，说明住房变紧张的原因。",
       chineseExplanation: "当需求增长快于可负担房源供给时，学生住房常常会变得紧张。",
     },
     authorViewpoint: "The writer sees student housing as a problem of demand and limited supply.",

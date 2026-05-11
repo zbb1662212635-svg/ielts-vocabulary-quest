@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { PDFParse } from "pdf-parse";
 import type {
   IELTSTopicRoute,
   ScenarioDifficultSentence,
@@ -12,11 +13,16 @@ import type {
 } from "../src/lib/types";
 import type { LearningResource, ResourceIndex } from "../src/lib/resourceTypes";
 
+type ImportArgs = {
+  input?: string;
+  limit?: number;
+};
+
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const privateDir = path.join(projectRoot, "data", "private");
 const resourceIndexPath = path.join(privateDir, "resources.index.json");
 const defaultRoot = "C:/Users/zhangbinbin/Desktop/学英语";
-const supportedExtensions = new Set([".txt", ".md", ".json", ".csv"]);
+const supportedExtensions = new Set([".txt", ".md", ".json", ".csv", ".pdf"]);
 
 const outputs = {
   articles: path.join(privateDir, "scenario-articles.generated.json"),
@@ -35,85 +41,103 @@ const generatedAt = new Date().toISOString();
 const resourceRoot = normalizePath(process.env.LEARNING_RESOURCE_ROOT || defaultRoot);
 const index = readResourceIndex();
 const input = args.input ? normalizePath(args.input) : "";
-const resources = input
+const allResources = input
   ? discoverFiles(input).map((file) => fileToResource(file, resourceRoot))
   : index.items.filter((item) => item.type === "foreign_magazine" || item.type === "user_note");
+const resources = typeof args.limit === "number" ? allResources.slice(0, args.limit) : allResources;
 
-const articles: ScenarioReadingArticle[] = [];
-const needsReview: Array<Record<string, unknown>> = [];
-const unsupportedFiles: Array<{ path: string; reason: string }> = [];
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
 
-for (const resource of resources) {
-  if (!supportedExtensions.has(resource.extension)) {
-    unsupportedFiles.push({ path: resource.relativePath, reason: "unsupported_for_scenario_v1" });
-    continue;
+async function main() {
+  const articles: ScenarioReadingArticle[] = [];
+  const needsReview: Array<Record<string, unknown>> = [];
+  const unsupportedFiles: Array<{ path: string; reason: string }> = [];
+
+  for (const resource of resources) {
+    if (!supportedExtensions.has(resource.extension)) {
+      unsupportedFiles.push({ path: resource.relativePath, reason: "unsupported_for_scenario_reading" });
+      continue;
+    }
+
+    try {
+      const parsed = await parseScenarioResource(resource);
+      if (parsed) articles.push(parsed);
+      else needsReview.push({ type: "empty_or_short_scenario_resource", path: resource.relativePath });
+    } catch (error) {
+      needsReview.push({ type: "scenario_parse_error", path: resource.relativePath, message: String(error) });
+    }
   }
-  try {
-    const parsed = parseScenarioResource(resource);
-    if (parsed) articles.push(parsed);
-    else needsReview.push({ type: "empty_or_short_scenario_resource", path: resource.relativePath });
-  } catch (error) {
-    needsReview.push({ type: "scenario_parse_error", path: resource.relativePath, message: String(error) });
-  }
+
+  const vocabulary = articles.flatMap((article) => article.keyVocabulary);
+  const expressions = articles.flatMap((article) => article.usefulExpressions);
+  const sentences = articles.flatMap((article) => article.difficultSentences);
+  const prompts = articles.flatMap((article) => article.readingPrompts);
+  const report = {
+    generatedAt,
+    resourceRoot,
+    foreignReadingFilesDetected: allResources.length,
+    filesProcessed: resources.length,
+    articlesExtracted: articles.length,
+    readyScenarioArticles: articles.filter((item) => item.status === "ready").length,
+    articlesNeedingReview: articles.filter((item) => item.status === "needs_review").length,
+    keyVocabularyExtracted: vocabulary.length,
+    usefulExpressionsExtracted: expressions.length,
+    difficultSentencesExtracted: sentences.length,
+    scenarioPromptsGenerated: prompts.length,
+    unsupportedFiles,
+    warnings: [
+      ...(resources.length < allResources.length ? [`Import limited to ${resources.length} of ${allResources.length} detected files.`] : []),
+      ...(unsupportedFiles.length ? ["Some files were skipped because their file type is not supported."] : []),
+    ],
+  };
+
+  writeJson(outputs.articles, { generatedAt, totalItems: articles.length, items: articles });
+  writeJson(outputs.vocabulary, { generatedAt, totalItems: vocabulary.length, items: vocabulary });
+  writeJson(outputs.expressions, { generatedAt, totalItems: expressions.length, items: expressions });
+  writeJson(outputs.sentences, { generatedAt, totalItems: sentences.length, items: sentences });
+  writeJson(outputs.prompts, { generatedAt, totalItems: prompts.length, items: prompts });
+  writeJson(outputs.needsReview, { generatedAt, totalItems: needsReview.length, items: needsReview });
+  writeJson(outputs.report, report);
+
+  console.log("\nScenario reading import complete.\n");
+  console.log(`Foreign reading files detected: ${report.foreignReadingFilesDetected}`);
+  console.log(`Files processed: ${report.filesProcessed}`);
+  console.log(`Scenario articles extracted: ${report.articlesExtracted}`);
+  console.log(`Key vocabulary extracted: ${report.keyVocabularyExtracted}`);
+  console.log(`Useful expressions extracted: ${report.usefulExpressionsExtracted}`);
+  console.log(`Difficult sentences extracted: ${report.difficultSentencesExtracted}`);
+  console.log(`Scenario prompts generated: ${report.scenarioPromptsGenerated}`);
+  console.log("\nOutput:");
+  Object.values(outputs).forEach((file) => console.log(normalizePath(file)));
 }
 
-const vocabulary = articles.flatMap((article) => article.keyVocabulary);
-const expressions = articles.flatMap((article) => article.usefulExpressions);
-const sentences = articles.flatMap((article) => article.difficultSentences);
-const prompts = articles.flatMap((article) => article.readingPrompts);
-const report = {
-  generatedAt,
-  resourceRoot,
-  foreignReadingFilesDetected: resources.length,
-  articlesExtracted: articles.length,
-  readyScenarioArticles: articles.filter((item) => item.status === "ready").length,
-  articlesNeedingReview: articles.filter((item) => item.status === "needs_review").length,
-  keyVocabularyExtracted: vocabulary.length,
-  usefulExpressionsExtracted: expressions.length,
-  difficultSentencesExtracted: sentences.length,
-  scenarioPromptsGenerated: prompts.length,
-  unsupportedFiles,
-  warnings: unsupportedFiles.length ? ["Some files were skipped because scenario reading v1 supports txt, md, json and csv only."] : [],
-};
-
-writeJson(outputs.articles, { generatedAt, totalItems: articles.length, items: articles });
-writeJson(outputs.vocabulary, { generatedAt, totalItems: vocabulary.length, items: vocabulary });
-writeJson(outputs.expressions, { generatedAt, totalItems: expressions.length, items: expressions });
-writeJson(outputs.sentences, { generatedAt, totalItems: sentences.length, items: sentences });
-writeJson(outputs.prompts, { generatedAt, totalItems: prompts.length, items: prompts });
-writeJson(outputs.needsReview, { generatedAt, totalItems: needsReview.length, items: needsReview });
-writeJson(outputs.report, report);
-
-console.log("\nScenario reading import complete.\n");
-console.log(`Foreign reading files detected: ${report.foreignReadingFilesDetected}`);
-console.log(`Scenario articles extracted: ${report.articlesExtracted}`);
-console.log(`Key vocabulary extracted: ${report.keyVocabularyExtracted}`);
-console.log(`Useful expressions extracted: ${report.usefulExpressionsExtracted}`);
-console.log(`Difficult sentences extracted: ${report.difficultSentencesExtracted}`);
-console.log(`Scenario prompts generated: ${report.scenarioPromptsGenerated}`);
-console.log("\nOutput:");
-Object.values(outputs).forEach((file) => console.log(normalizePath(file)));
-
-function parseScenarioResource(resource: LearningResource): ScenarioReadingArticle | null {
+async function parseScenarioResource(resource: LearningResource): Promise<ScenarioReadingArticle | null> {
   if (resource.extension === ".json") {
     const raw = JSON.parse(fs.readFileSync(resource.absolutePath, "utf8")) as Partial<ScenarioReadingArticle>;
     if (raw.id && raw.title && raw.paragraphs?.length) return normalizeArticle(raw, resource);
   }
 
-  const text = cleanText(fs.readFileSync(resource.absolutePath, "utf8"));
+  const rawText = resource.extension === ".pdf" ? await extractPdfText(resource.absolutePath) : fs.readFileSync(resource.absolutePath, "utf8");
+  const text = cleanText(rawText);
   if (countWords(text) < 120) return null;
+
   const title = inferTitle(text, resource);
   const articleId = `scenario_${stableId(resource.relativePath)}`;
-  const paragraphs = splitParagraphs(text)
-    .slice(0, 8)
-    .map((paragraph, index): ScenarioReadingParagraph => ({
-      id: `${articleId}_p${index + 1}`,
-      articleId,
-      index: index + 1,
-      text: paragraph,
-      gist: buildGist(paragraph),
-      functionTag: inferFunctionTag(paragraph, index),
-    }));
+  const selectedParagraphs = selectExcerptParagraphs(splitParagraphs(text));
+  if (!selectedParagraphs.length) return null;
+
+  const paragraphs = selectedParagraphs.map((paragraph, index): ScenarioReadingParagraph => ({
+    id: `${articleId}_p${index + 1}`,
+    articleId,
+    index: index + 1,
+    text: paragraph,
+    gist: buildGist(paragraph),
+    functionTag: inferFunctionTag(paragraph, index),
+  }));
+
   const excerptText = paragraphs.map((item) => item.text).join(" ");
   const topicTags = inferTopicTags(`${resource.relativePath} ${title} ${excerptText}`);
   const vocabulary = extractVocabulary(articleId, paragraphs, topicTags);
@@ -124,7 +148,7 @@ function parseScenarioResource(resource: LearningResource): ScenarioReadingArtic
   return {
     id: articleId,
     title,
-    sourceName: resource.folder || "Local scenario reading",
+    sourceName: inferSourceName(resource),
     sourceType: resource.type === "foreign_magazine" ? "magazine" : resource.type === "user_note" ? "user_note" : "foreign_reading",
     sourceResourceId: resource.id,
     sourceFileName: resource.fileName,
@@ -150,8 +174,8 @@ function parseScenarioResource(resource: LearningResource): ScenarioReadingArtic
     usefulExpressions: expressions,
     difficultSentences,
     readingPrompts: prompts,
-    status: paragraphs.length ? "ready" : "needs_review",
-    warnings: paragraphs.length ? [] : ["no_paragraphs_extracted"],
+    status: "ready",
+    warnings: resource.extension === ".pdf" ? ["text_extracted_from_pdf_excerpt"] : [],
   };
 }
 
@@ -162,7 +186,7 @@ function normalizeArticle(raw: Partial<ScenarioReadingArticle>, resource: Learni
     title: raw.title ?? resource.title,
     subtitle: raw.subtitle,
     author: raw.author,
-    sourceName: raw.sourceName ?? resource.folder,
+    sourceName: raw.sourceName ?? inferSourceName(resource),
     sourceType: raw.sourceType ?? "foreign_reading",
     sourceResourceId: raw.sourceResourceId ?? resource.id,
     sourceFileName: raw.sourceFileName ?? resource.fileName,
@@ -185,6 +209,16 @@ function normalizeArticle(raw: Partial<ScenarioReadingArticle>, resource: Learni
     status: raw.status ?? "ready",
     warnings: raw.warnings ?? [],
   };
+}
+
+async function extractPdfText(filePath: string): Promise<string> {
+  const parser = new PDFParse({ data: fs.readFileSync(filePath) });
+  try {
+    const result = await parser.getText();
+    return result.text ?? "";
+  } finally {
+    await parser.destroy?.();
+  }
 }
 
 function extractVocabulary(articleId: string, paragraphs: ScenarioReadingParagraph[], topicTags: IELTSTopicRoute[]): ScenarioVocabularyItem[] {
@@ -230,7 +264,7 @@ function extractExpressions(articleId: string, paragraphs: ScenarioReadingParagr
           paragraphId: paragraph.id,
           expression: match[0],
           sourceSentence: sentence,
-          usageNote: "Save this as a reusable expression for IELTS topic writing and reading awareness.",
+          usageNote: "Save this as a reusable expression for IELTS topic reading awareness.",
           tags: ["scenario", "expression"],
         });
       }
@@ -245,7 +279,7 @@ function extractExpressions(articleId: string, paragraphs: ScenarioReadingParagr
       paragraphId: paragraph.id,
       expression: sentence.split(/\s+/).slice(0, 5).join(" "),
       sourceSentence: sentence,
-      usageNote: "A useful opening phrase from the source sentence.",
+      usageNote: "A reusable source phrase from the scenario reading excerpt.",
       tags: ["source phrase"],
     };
   });
@@ -298,7 +332,7 @@ function buildPrompts(
       id: `${articleId}_prompt_vocab`,
       articleId,
       type: "vocabulary_notice",
-      prompt: "选出一个最值得加入词汇装备的词，并说明原因。",
+      prompt: "选出一个最值得加入今天词汇装备的词，并说明原因。",
       suggestedAnswer: vocabulary[0]?.word,
       isReflective: true,
     },
@@ -342,8 +376,8 @@ function fileToResource(filePath: string, root: string): LearningResource {
     title: cleanTitle(path.basename(filePath, extension)),
     fileName: path.basename(filePath),
     extension,
-    type: folder.includes("magazine") ? "foreign_magazine" : "user_note",
-    fileKind: extension === ".json" || extension === ".csv" ? "structured_data" : "text",
+    type: "foreign_magazine",
+    fileKind: extension === ".json" || extension === ".csv" ? "structured_data" : extension === ".pdf" ? "document" : "text",
     absolutePath: normalizePath(filePath),
     relativePath,
     folder,
@@ -368,11 +402,15 @@ function loadEnvLocal() {
   }
 }
 
-function parseArgs(values: string[]) {
-  const result: { input?: string } = {};
+function parseArgs(values: string[]): ImportArgs {
+  const result: ImportArgs = {};
   for (let i = 0; i < values.length; i += 1) {
     if (values[i] === "--input" && values[i + 1]) {
       result.input = values[i + 1];
+      i += 1;
+    } else if (values[i] === "--limit" && values[i + 1]) {
+      const limit = Number(values[i + 1]);
+      if (Number.isFinite(limit) && limit > 0) result.limit = limit;
       i += 1;
     }
   }
@@ -380,11 +418,38 @@ function parseArgs(values: string[]) {
 }
 
 function cleanText(text: string): string {
-  return text.replace(/\r/g, "\n").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  return text
+    .replace(/\r/g, "\n")
+    .replace(/--\s*\d+\s+of\s+\d+\s*--/gi, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !isBoilerplateLine(line))
+    .join("\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function splitParagraphs(text: string): string[] {
-  return text.split(/\n\s*\n/).map((item) => item.trim()).filter((item) => countWords(item) >= 35);
+  return text
+    .split(/\n\s*\n/)
+    .map((item) => item.trim())
+    .filter((item) => countWords(item) >= 35)
+    .filter((item) => englishDensity(item) >= 0.55)
+    .filter((item) => !/^(contents|the world this week|leaders|letters|briefing|business|finance & economics)$/i.test(item));
+}
+
+function selectExcerptParagraphs(paragraphs: string[]): string[] {
+  const useful = paragraphs.filter((paragraph) => countWords(paragraph) >= 45);
+  const selected: string[] = [];
+  let total = 0;
+  for (const paragraph of useful) {
+    const words = countWords(paragraph);
+    if (selected.length >= 6 || total + words > 650) break;
+    selected.push(paragraph);
+    total += words;
+  }
+  return selected.length ? selected : useful.slice(0, 4);
 }
 
 function splitSentences(text: string): string[] {
@@ -406,25 +471,35 @@ function inferFunctionTag(paragraph: string, index: number): ScenarioReadingPara
 }
 
 function inferTitle(text: string, resource: LearningResource): string {
-  return text.split(/\r?\n/).map((item) => item.trim()).find((item) => item.length >= 6 && item.length <= 100) ?? resource.title;
+  const candidates = text.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+  return candidates.find((item) => item.length >= 8 && item.length <= 90 && englishDensity(item) >= 0.65) ?? resource.title;
+}
+
+function inferSourceName(resource: LearningResource): string {
+  const lower = resource.relativePath.toLowerCase();
+  if (lower.includes("economist")) return "The Economist";
+  if (lower.includes("new_yorker")) return "The New Yorker";
+  if (lower.includes("atlantic")) return "The Atlantic";
+  if (lower.includes("wired")) return "Wired";
+  return resource.folder || "Local scenario reading";
 }
 
 function inferTopicTags(text: string): IELTSTopicRoute[] {
   const lower = text.toLowerCase();
   const rules: Array<[IELTSTopicRoute, string[]]> = [
-    ["science_technology", ["science", "technology", "ai", "space", "energy", "research", "data"]],
-    ["art_culture", ["art", "museum", "exhibition", "music", "film", "culture", "heritage"]],
-    ["environment_nature", ["environment", "climate", "pollution", "species", "habitat", "conservation"]],
-    ["education_learning", ["education", "student", "university", "school", "learning", "course"]],
-    ["health_lifestyle", ["health", "sleep", "stress", "diet", "exercise", "hospital"]],
-    ["work_business", ["work", "business", "market", "company", "advertising", "consumer"]],
-    ["cities_transport", ["city", "urban", "transport", "traffic", "housing", "infrastructure"]],
-    ["media_communication", ["media", "news", "communication", "internet", "language"]],
-    ["history_society", ["history", "society", "community", "population", "tradition"]],
-    ["travel_daily_services", ["hotel", "accommodation", "reservation", "tour", "ticket", "library"]],
+    ["science_technology", ["science", "technology", "ai", "space", "energy", "research", "data", "medical", "robot"]],
+    ["art_culture", ["art", "museum", "exhibition", "music", "film", "culture", "heritage", "gallery"]],
+    ["environment_nature", ["environment", "climate", "pollution", "species", "habitat", "conservation", "nature"]],
+    ["education_learning", ["education", "student", "university", "school", "learning", "course", "exam"]],
+    ["health_lifestyle", ["health", "sleep", "stress", "diet", "exercise", "hospital", "mental"]],
+    ["work_business", ["work", "business", "market", "company", "advertising", "consumer", "economy"]],
+    ["cities_transport", ["city", "urban", "transport", "traffic", "housing", "infrastructure", "rail"]],
+    ["media_communication", ["media", "news", "communication", "internet", "language", "social media"]],
+    ["history_society", ["history", "society", "community", "population", "tradition", "migration"]],
+    ["travel_daily_services", ["hotel", "accommodation", "reservation", "tour", "ticket", "library", "appointment"]],
   ];
   const tags = rules.filter(([, keys]) => keys.some((key) => lower.includes(key))).map(([route]) => route);
-  return tags.length ? tags : ["education_learning"];
+  return tags.length ? [...new Set(tags)] : ["history_society"];
 }
 
 function inferScenarioTags(text: string): string[] {
@@ -436,7 +511,7 @@ function inferScenarioTags(text: string): string[] {
 
 function inferGrammarTags(sentence: string): string[] {
   const tags: string[] = [];
-  if (/\bwhich|that|who\b/.test(sentence)) tags.push("relative clause");
+  if (/\bwhich|that|who\b/i.test(sentence)) tags.push("relative clause");
   if (/\balthough|while|whereas|however\b/i.test(sentence)) tags.push("contrast");
   if (/\bbecause|therefore|as a result\b/i.test(sentence)) tags.push("cause and effect");
   return tags.length ? tags : ["long sentence"];
@@ -453,6 +528,26 @@ function estimateLevel(text: string): "B1" | "B2" | "C1" {
   if (average > 26) return "C1";
   if (average < 18) return "B1";
   return "B2";
+}
+
+function isBoilerplateLine(line: string): boolean {
+  const lower = line.toLowerCase();
+  return (
+    lower.includes("优质app推荐") ||
+    lower.includes("点击下载") ||
+    lower.includes("duolingo") ||
+    lower.includes("notability") ||
+    lower.includes("欧路词典") ||
+    lower.includes("英阅阅读器") ||
+    /^may \d+(st|nd|rd|th) \d{4}$/i.test(line) ||
+    /^the economist$/i.test(line)
+  );
+}
+
+function englishDensity(value: string): number {
+  const letters = value.match(/[A-Za-z]/g)?.length ?? 0;
+  const nonSpace = value.replace(/\s/g, "").length || 1;
+  return letters / nonSpace;
 }
 
 function countWords(value: string): number {
@@ -490,4 +585,8 @@ const commonWords = new Set([
   "therefore",
   "example",
   "usually",
+  "government",
+  "million",
+  "companies",
+  "economic",
 ]);

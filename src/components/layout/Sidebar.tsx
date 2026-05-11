@@ -10,6 +10,7 @@ import {
   Headphones,
   LayoutDashboard,
   Map,
+  Network,
   Newspaper,
   RotateCcw,
   Settings,
@@ -21,8 +22,9 @@ const navItems = [
   { href: "/quest", label: "任务地图", icon: Map },
   { href: "/listening/studio", label: "听力工作室", icon: Headphones },
   { href: "/reading/dossier", label: "阅读档案", icon: BookOpenCheck },
-  { href: "/reading-lab", label: "外刊素材库", icon: Newspaper },
+  { href: "/reading-lab", label: "情景阅读库", icon: Newspaper },
   { href: "/resource-library", label: "资源库", icon: FolderSearch },
+  { href: "/resource-library/graph", label: "内容图谱", icon: Network },
   { href: "/review", label: "错因复盘", icon: RotateCcw },
   { href: "/settings", label: "设置与数据", icon: Settings },
 ];

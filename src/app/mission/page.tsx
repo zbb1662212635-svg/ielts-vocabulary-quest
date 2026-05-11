@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { topicRouteLabels } from "@/data/ielts-missions.sample";
-import { getSafeTodayMission, isFallbackMission } from "@/lib/missionLoader";
+import { isFallbackMission } from "@/lib/missionLoader";
 import { detectDictationError, isAnswerCorrect } from "@/lib/normalizer";
 import { getReadingCoachFeedback, readingErrorType } from "@/lib/readingCoach";
 import {
@@ -44,6 +44,7 @@ import type {
   VocabularyItem,
 } from "@/lib/types";
 import { useDictationItems } from "@/lib/useDictationItems";
+import { useGeneratedMission } from "@/lib/useGeneratedMission";
 import { useReadingAssets } from "@/lib/useReadingAssets";
 import { useScenarioReadings } from "@/lib/useScenarioReadings";
 import { useVocabulary } from "@/lib/useVocabulary";
@@ -74,15 +75,16 @@ function MissionExperience() {
   const privateDictationItems = useDictationItems();
   const readingAssets = useReadingAssets();
   const scenarioData = useScenarioReadings();
+  const generatedMission = useGeneratedMission();
 
   const baseMission = useMemo(
     () =>
       enrichMissionWithReading(
-        enrichMissionWithVocabulary(getSafeTodayMission(), vocabularyData.items, privateDictationItems),
+        enrichMissionWithVocabulary(generatedMission.mission, vocabularyData.items, privateDictationItems),
         readingAssets.passages,
         readingAssets.questions,
       ),
-    [privateDictationItems, readingAssets.passages, readingAssets.questions, vocabularyData.items],
+    [generatedMission.mission, privateDictationItems, readingAssets.passages, readingAssets.questions, vocabularyData.items],
   );
   const scenarioArticle = useMemo(() => selectScenarioArticle(baseMission, scenarioData.articles), [baseMission, scenarioData.articles]);
   const mission = useMemo(() => enrichMissionWithScenario(baseMission, scenarioArticle), [baseMission, scenarioArticle]);
@@ -316,6 +318,13 @@ function MissionExperience() {
         {showDebugWarning ? (
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
             Mission data issue detected, fallback mission active.
+          </div>
+        ) : null}
+        {generatedMission.warnings.length || generatedMission.usedFallbacks.length ? (
+          <div className="mb-4 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 text-sm font-bold text-indigo-900">
+            今日任务由 Mission Engine 自动组课。
+            {generatedMission.usedFallbacks.length ? ` 使用了 ${generatedMission.usedFallbacks.length} 个降级补位。` : ""}
+            {generatedMission.warnings.length ? ` 提示：${generatedMission.warnings[0]}` : ""}
           </div>
         ) : null}
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
