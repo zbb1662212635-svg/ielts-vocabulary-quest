@@ -23,6 +23,8 @@ export type ErrorType =
   | "listening_not_recognized"
   | "main_idea_error"
   | "tfng_error"
+  | "detail_location_error"
+  | "sentence_completion_error"
   | "author_attitude_error"
   | "difficult_sentence_error";
 
@@ -591,6 +593,90 @@ export type DictationItem = {
   itemType: "word" | "phrase" | "sentence" | "number" | "date" | "address" | "name" | "form_field";
   source: "private_audio" | "private_transcript" | "vocabulary_fallback" | "sample";
   commonMistakes?: string[];
+  status: "ready" | "needs_review";
+  warnings: string[];
+};
+
+export type IELTSQuestionType =
+  | "multiple_choice"
+  | "matching"
+  | "tfng"
+  | "ynng"
+  | "sentence_completion"
+  | "summary_completion"
+  | "table_completion"
+  | "flow_chart_completion"
+  | "diagram_labeling"
+  | "short_answer"
+  | "matching_headings"
+  | "matching_information"
+  | "matching_features"
+  | "matching_sentence_endings"
+  | "unknown";
+
+export type ReadingPassage = {
+  id: string;
+  title: string;
+  sourceResourceId?: string;
+  sourceFileName?: string;
+  sourcePath?: string;
+  text: string;
+  paragraphs: {
+    id: string;
+    index: number;
+    label?: string;
+    text: string;
+    mainIdea?: string;
+  }[];
+  topicTags: IELTSTopicRoute[];
+  skillTags: ("reading" | "vocabulary" | "review")[];
+  level: "B1" | "B2" | "C1";
+  wordCount: number;
+  questions: string[];
+  status: "ready" | "needs_review";
+  warnings: string[];
+};
+
+export type IELTSReadingQuestion = {
+  id: string;
+  passageId?: string;
+  sourceResourceId?: string;
+  sourceFileName?: string;
+  questionNumber?: number;
+  questionType: IELTSQuestionType;
+  prompt: string;
+  options?: string[];
+  correctAnswer?: string;
+  acceptableAnswers?: string[];
+  evidenceText?: string;
+  evidenceParagraphId?: string;
+  explanation?: string;
+  topicTags: IELTSTopicRoute[];
+  skillTags: (
+    | "main_idea"
+    | "synonym"
+    | "tfng"
+    | "detail_location"
+    | "sentence_completion"
+    | "author_attitude"
+    | "difficult_sentence"
+    | "reading"
+  )[];
+  difficulty: 1 | 2 | 3 | 4 | 5;
+  status: "ready" | "needs_review";
+  warnings: string[];
+};
+
+export type ReadingAnswerKey = {
+  id: string;
+  sourceResourceId?: string;
+  sourceFileName?: string;
+  passageId?: string;
+  answers: {
+    questionNumber: number;
+    answer: string;
+    alternativeAnswers?: string[];
+  }[];
   status: "ready" | "needs_review";
   warnings: string[];
 };

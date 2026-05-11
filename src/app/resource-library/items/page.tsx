@@ -84,7 +84,7 @@ export default function ResourceItemsPage() {
             </tbody>
           </table>
         </div>
-        {items.length > 300 && <p className="border-t border-slate-100 p-4 text-sm text-slate-500">仅显示前 300 条。</p>}
+        {items.length > 300 ? <p className="border-t border-slate-100 p-4 text-sm text-slate-500">仅显示前 300 条。</p> : null}
       </section>
     </AppShell>
   );
@@ -100,7 +100,11 @@ function ResourceRow({ item }: { item: LearningResource }) {
       <td className="px-4 py-3 text-slate-600">{formatSize(item.sizeBytes)}</td>
       <td className="px-4 py-3 text-slate-600">{item.modifiedAt.slice(0, 10)}</td>
       <td className="px-4 py-3">
-        <span className={`rounded-full px-2 py-1 text-xs font-black ${item.status === "needs_review" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+        <span
+          className={`rounded-full px-2 py-1 text-xs font-black ${
+            item.status === "needs_review" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
+          }`}
+        >
           {item.status}
         </span>
       </td>

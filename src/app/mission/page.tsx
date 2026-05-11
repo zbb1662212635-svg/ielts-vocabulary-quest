@@ -23,8 +23,9 @@ import { detectDictationError, isAnswerCorrect } from "@/lib/normalizer";
 import { getReadingCoachFeedback, readingErrorType } from "@/lib/readingCoach";
 import { applyAttempt } from "@/lib/scoring";
 import { getProgressMap, saveAttempt, saveProgressMap, upsertReviewItem } from "@/lib/storage";
-import type { DictationItem, ErrorType, IELTSMission, MissionStage, ReadingQuestion, TrainingAttempt, VocabularyItem } from "@/lib/types";
+import type { DictationItem, ErrorType, IELTSMission, IELTSReadingQuestion, MissionStage, ReadingPassage, ReadingQuestion, TrainingAttempt, VocabularyItem } from "@/lib/types";
 import { useDictationItems } from "@/lib/useDictationItems";
+import { useReadingAssets } from "@/lib/useReadingAssets";
 import { useVocabulary } from "@/lib/useVocabulary";
 
 const CURRENT_MISSION_ID_KEY = "ielts-mission-lab:currentMissionId";
@@ -51,9 +52,15 @@ export default function MissionPage() {
 function MissionExperience() {
   const vocabularyData = useVocabulary();
   const privateDictationItems = useDictationItems();
+  const readingAssets = useReadingAssets();
   const mission = useMemo(
-    () => enrichMissionWithVocabulary(getSafeTodayMission(), vocabularyData.items, privateDictationItems),
-    [privateDictationItems, vocabularyData.items],
+    () =>
+      enrichMissionWithReading(
+        enrichMissionWithVocabulary(getSafeTodayMission(), vocabularyData.items, privateDictationItems),
+        readingAssets.passages,
+        readingAssets.questions,
+      ),
+    [privateDictationItems, readingAssets.passages, readingAssets.questions, vocabularyData.items],
   );
   const route = topicRouteLabels[mission.topicRoute];
   const router = useRouter();
@@ -834,4 +841,45 @@ function buildUsageNote(item: VocabularyItem) {
     return `${item.word} is useful for dictation because spelling accuracy affects IELTS Listening scores.`;
   }
   return `Use ${item.word} as part of your mission vocabulary loadout.`;
+}
+
+function enrichMissionWithReading(mission: IELTSMission, passages: ReadingPassage[], questions: IELTSReadingQuestion[]): IELTSMission {
+  if (!passages.length) return mission;
+  const passage =
+    passages.find((item) => item.topicTags.includes(mission.topicRoute) && item.status === "ready") ??
+    passages.find((item) => item.status === "ready") ??
+    passages[0];
+  if (!passage) return mission;
+
+  const readyQuestions = questions
+    .filter((item) => item.passageId === passage.id && item.status === "ready" && item.correctAnswer)
+    .slice(0, 6)
+    .map(convertIELTSQuestion);
+
+  return {
+    ...mission,
+    readingTask: {
+      id: passage.id,
+      title: passage.title,
+      text: passage.paragraphs.length
+        ? passage.paragraphs.map((item) => `${item.label ?? item.index + 1}. ${item.text}`).join("\n\n")
+        : passage.text,
+      questions: readyQuestions.length ? readyQuestions : mission.readingTask.questions,
+    },
+  };
+}
+
+function convertIELTSQuestion(question: IELTSReadingQuestion): ReadingQuestion {
+  return {
+    id: question.id,
+    articleId: question.passageId ?? "private_reading",
+    type: question.questionType === "tfng" ? "tfng" : question.questionType === "multiple_choice" ? "multiple_choice" : "detail_location",
+    prompt: question.prompt,
+    options: question.options,
+    correctAnswer: question.correctAnswer ?? "",
+    explanation: question.explanation ?? "This answer comes from your imported IELTS reading resource.",
+    evidenceText: question.evidenceText,
+    skillTags: question.skillTags,
+    difficulty: question.difficulty,
+  };
 }

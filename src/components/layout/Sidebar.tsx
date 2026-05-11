@@ -2,13 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarCheck, Database, FolderSearch, Headphones, LayoutDashboard, Map, Newspaper, RotateCcw, Settings } from "lucide-react";
+import {
+  BookOpenCheck,
+  CalendarCheck,
+  Database,
+  FolderSearch,
+  Headphones,
+  LayoutDashboard,
+  Map,
+  Newspaper,
+  RotateCcw,
+  Settings,
+} from "lucide-react";
 
 const navItems = [
   { href: "/", label: "学习首页", icon: LayoutDashboard },
   { href: "/mission", label: "今日任务", icon: CalendarCheck },
   { href: "/quest", label: "任务地图", icon: Map },
   { href: "/listening/studio", label: "听力工作室", icon: Headphones },
+  { href: "/reading/dossier", label: "阅读档案", icon: BookOpenCheck },
   { href: "/reading-lab", label: "外刊素材库", icon: Newspaper },
   { href: "/resource-library", label: "资源库", icon: FolderSearch },
   { href: "/review", label: "错因复盘", icon: RotateCcw },
@@ -33,7 +45,7 @@ export function Sidebar() {
       <nav className="space-y-2">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const active = pathname === item.href;
+          const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}

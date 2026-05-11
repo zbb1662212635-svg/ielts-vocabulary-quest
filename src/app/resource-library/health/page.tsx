@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, FolderSearch } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import type { ResourceHealth } from "@/lib/resourceTypes";
@@ -37,6 +38,24 @@ type ListeningImportHealth = {
   } | null;
 };
 
+type ReadingImportHealth = {
+  imported: boolean;
+  passages: number;
+  questions: number;
+  readyQuestions: number;
+  questionsWithAnswers: number;
+  questionsWithEvidence: number;
+  questionsNeedingReview: number;
+  needsReview: number;
+  lastImportedAt: string | null;
+  report?: {
+    readingFilesDetected?: number;
+    answerKeyFilesDetected?: number;
+    unsupportedFiles?: unknown[];
+    warnings?: string[];
+  } | null;
+};
+
 const expectedFolders = [
   "ielts-papers",
   "vocabulary-books",
@@ -52,6 +71,7 @@ export default function ResourceHealthPage() {
   const [health, setHealth] = useState<ResourceHealth | null>(null);
   const [vocabHealth, setVocabHealth] = useState<VocabularyImportHealth | null>(null);
   const [listeningHealth, setListeningHealth] = useState<ListeningImportHealth | null>(null);
+  const [readingHealth, setReadingHealth] = useState<ReadingImportHealth | null>(null);
 
   useEffect(() => {
     fetch("/api/resource-health")
@@ -59,7 +79,7 @@ export default function ResourceHealthPage() {
       .then((data: ResourceHealth) => setHealth(data))
       .catch(() =>
         setHealth({
-          resourceRoot: "C:/Users/zhangbinbin/Desktop/\u5b66\u82f1\u8bed",
+          resourceRoot: "C:/Users/zhangbinbin/Desktop/学英语",
           scannedAt: "",
           rootExists: false,
           totalFiles: 0,
@@ -79,6 +99,10 @@ export default function ResourceHealthPage() {
       .then((response) => response.json())
       .then((data: ListeningImportHealth) => setListeningHealth(data))
       .catch(() => setListeningHealth(null));
+    fetch("/api/reading-health")
+      .then((response) => response.json())
+      .then((data: ReadingImportHealth) => setReadingHealth(data))
+      .catch(() => setReadingHealth(null));
   }, []);
 
   return (
@@ -87,7 +111,7 @@ export default function ResourceHealthPage() {
         <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Resource Library Health</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">本地学习资源健康检查</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          这里只显示外部资源目录的扫描结果。原始 PDF、EPUB、音频、真题和生成的私有索引不会提交到 GitHub。
+          这里显示外部资源目录的扫描、导入和可用性状态。原始资料和生成的私有索引都不会提交到 GitHub。
         </p>
       </section>
 
@@ -116,7 +140,7 @@ export default function ResourceHealthPage() {
         )}
       </section>
 
-      {health && (
+      {health ? (
         <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {expectedFolders.map((folder) => {
             const detected = health.detectedExpectedFolders.includes(folder);
@@ -137,66 +161,120 @@ export default function ResourceHealthPage() {
             );
           })}
         </section>
-      )}
+      ) : null}
 
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Vocabulary Import Health</p>
-        <h2 className="mt-2 text-2xl font-black text-slate-950">词汇导入健康状态</h2>
-        {!vocabHealth ? (
-          <p className="mt-3 text-sm text-slate-600">正在读取词汇导入报告...</p>
-        ) : !vocabHealth.imported ? (
-          <p className="mt-3 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">
-            Private vocabulary has not been imported yet. Run npm run import:vocabulary.
-          </p>
-        ) : (
-          <>
-            <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
-              <Stat label="词汇资源文件" value={(health?.byType.ielts_vocabulary ?? 0).toString()} />
-              <Stat label="已解析文件" value={String(vocabHealth.report?.parsedFiles ?? 0)} />
-              <Stat label="不支持文件" value={String(vocabHealth.report?.unsupportedFiles?.length ?? 0)} />
-              <Stat label="词条总数" value={String(vocabHealth.totalVocabularyItems)} />
-              <Stat label="任务词汇可用" value={String(vocabHealth.usableForLoadout)} />
-              <Stat label="释义题可用" value={String(vocabHealth.usableForMeaningQuiz)} />
-              <Stat label="听写可用" value={String(vocabHealth.usableForDictation)} />
-              <Stat label="同义替换可用" value={String(vocabHealth.usableForSynonymArena)} />
-              <Stat label="需复查" value={String(vocabHealth.needsReviewCount)} />
-              <Stat label="已合并重复" value={String(vocabHealth.duplicateCount)} />
-            </div>
-            <p className="mt-4 text-sm text-slate-500">最后导入：{vocabHealth.lastImportedAt ?? "unknown"}</p>
-          </>
-        )}
-      </section>
-
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Audio Import Health</p>
-        <h2 className="mt-2 text-2xl font-black text-slate-950">听力资源导入状态</h2>
-        {!listeningHealth ? (
-          <p className="mt-3 text-sm text-slate-600">正在读取音频导入报告...</p>
-        ) : !listeningHealth.imported ? (
-          <p className="mt-3 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">
-            Audio has not been imported yet. Run npm run import:audio.
-          </p>
-        ) : (
-          <>
-            <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
-              <Stat label="音频文件" value={String(listeningHealth.audioTracks)} />
-              <Stat label="Transcript 文件" value={String(listeningHealth.transcripts)} />
-              <Stat label="已匹配音频" value={String(listeningHealth.matchedPairs)} />
-              <Stat label="未匹配音频" value={String(listeningHealth.unmatchedAudio)} />
-              <Stat label="未匹配 Transcript" value={String(listeningHealth.unmatchedTranscripts)} />
-              <Stat label="听写题" value={String(listeningHealth.dictationItems)} />
-              <Stat label="需复查" value={String(listeningHealth.needsReview)} />
-            </div>
-            {listeningHealth.report?.warnings?.length ? (
-              <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">
-                {listeningHealth.report.warnings[0]}
-              </p>
-            ) : null}
-            <p className="mt-4 text-sm text-slate-500">最后导入：{listeningHealth.lastImportedAt ?? "unknown"}</p>
-          </>
-        )}
-      </section>
+      <VocabularyHealthSection health={vocabHealth} resourceHealth={health} />
+      <ListeningHealthSection health={listeningHealth} />
+      <ReadingHealthSection health={readingHealth} resourceHealth={health} />
     </AppShell>
+  );
+}
+
+function VocabularyHealthSection({
+  health,
+  resourceHealth,
+}: {
+  health: VocabularyImportHealth | null;
+  resourceHealth: ResourceHealth | null;
+}) {
+  return (
+    <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Vocabulary Import Health</p>
+      <h2 className="mt-2 text-2xl font-black text-slate-950">词汇导入健康状态</h2>
+      {!health ? (
+        <p className="mt-3 text-sm text-slate-600">正在读取词汇导入报告...</p>
+      ) : !health.imported ? (
+        <Warning>Private vocabulary has not been imported yet. Run npm run import:vocabulary.</Warning>
+      ) : (
+        <>
+          <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+            <Stat label="词汇资源文件" value={String(resourceHealth?.byType.ielts_vocabulary ?? 0)} />
+            <Stat label="已解析文件" value={String(health.report?.parsedFiles ?? 0)} />
+            <Stat label="不支持文件" value={String(health.report?.unsupportedFiles?.length ?? 0)} />
+            <Stat label="词条总数" value={String(health.totalVocabularyItems)} />
+            <Stat label="任务词汇可用" value={String(health.usableForLoadout)} />
+            <Stat label="释义题可用" value={String(health.usableForMeaningQuiz)} />
+            <Stat label="听写可用" value={String(health.usableForDictation)} />
+            <Stat label="同义替换可用" value={String(health.usableForSynonymArena)} />
+            <Stat label="需复查" value={String(health.needsReviewCount)} />
+            <Stat label="已合并重复" value={String(health.duplicateCount)} />
+          </div>
+          <p className="mt-4 text-sm text-slate-500">最后导入：{health.lastImportedAt ?? "unknown"}</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+function ListeningHealthSection({ health }: { health: ListeningImportHealth | null }) {
+  return (
+    <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Audio Import Health</p>
+      <h2 className="mt-2 text-2xl font-black text-slate-950">听力资源导入状态</h2>
+      {!health ? (
+        <p className="mt-3 text-sm text-slate-600">正在读取音频导入报告...</p>
+      ) : !health.imported ? (
+        <Warning>Audio has not been imported yet. Run npm run import:audio.</Warning>
+      ) : (
+        <>
+          <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+            <Stat label="音频文件" value={String(health.audioTracks)} />
+            <Stat label="Transcript 文件" value={String(health.transcripts)} />
+            <Stat label="已匹配音频" value={String(health.matchedPairs)} />
+            <Stat label="未匹配音频" value={String(health.unmatchedAudio)} />
+            <Stat label="未匹配 Transcript" value={String(health.unmatchedTranscripts)} />
+            <Stat label="听写题" value={String(health.dictationItems)} />
+            <Stat label="需复查" value={String(health.needsReview)} />
+          </div>
+          {health.report?.warnings?.length ? <Warning>{health.report.warnings[0]}</Warning> : null}
+          <p className="mt-4 text-sm text-slate-500">最后导入：{health.lastImportedAt ?? "unknown"}</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+function ReadingHealthSection({
+  health,
+  resourceHealth,
+}: {
+  health: ReadingImportHealth | null;
+  resourceHealth: ResourceHealth | null;
+}) {
+  const questionsWithoutAnswers = Math.max(0, (health?.questions ?? 0) - (health?.questionsWithAnswers ?? 0));
+
+  return (
+    <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Reading Import Health</p>
+      <h2 className="mt-2 text-2xl font-black text-slate-950">阅读真题导入状态</h2>
+      {!health ? (
+        <p className="mt-3 text-sm text-slate-600">正在读取阅读导入报告...</p>
+      ) : !health.imported ? (
+        <Warning>Reading resources have not been imported yet. Run npm run import:reading.</Warning>
+      ) : (
+        <>
+          <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+            <Stat label="阅读资源文件" value={String(resourceHealth?.byType.ielts_past_paper ?? 0)} />
+            <Stat label="已检测阅读文件" value={String(health.report?.readingFilesDetected ?? 0)} />
+            <Stat label="不支持文件" value={String(health.report?.unsupportedFiles?.length ?? 0)} />
+            <Stat label="文章数" value={String(health.passages)} />
+            <Stat label="题目数" value={String(health.questions)} />
+            <Stat label="答案文件" value={String(health.report?.answerKeyFilesDetected ?? 0)} />
+            <Stat label="有答案题目" value={String(health.questionsWithAnswers)} />
+            <Stat label="无答案题目" value={String(questionsWithoutAnswers)} />
+            <Stat label="有证据题目" value={String(health.questionsWithEvidence)} />
+            <Stat label="可判分题目" value={String(health.readyQuestions)} />
+            <Stat label="题目需复查" value={String(health.questionsNeedingReview)} />
+            <Stat label="导入需复查" value={String(health.needsReview)} />
+          </div>
+          {health.questionsWithAnswers === 0 ? (
+            <Warning>Passages imported, but question checking is limited without answer keys.</Warning>
+          ) : null}
+          {health.report?.warnings?.length ? <Warning>{health.report.warnings[0]}</Warning> : null}
+          <p className="mt-4 text-sm text-slate-500">最后导入：{health.lastImportedAt ?? "unknown"}</p>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -212,4 +290,8 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="mt-1 text-xs font-bold text-slate-500">{label}</div>
     </div>
   );
+}
+
+function Warning({ children }: { children: ReactNode }) {
+  return <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">{children}</p>;
 }

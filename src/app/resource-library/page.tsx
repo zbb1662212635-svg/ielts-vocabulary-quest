@@ -34,7 +34,7 @@ export default function ResourceLibraryPage() {
         <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Resource Library</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">本地资源库</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          这里先做资源发现和索引，不解析原文内容。后续词汇、音频、真题和外刊训练都会从这个索引开始。
+          这里先做资源发现和索引。原始 PDF、EPUB、音频、真题和私有生成数据都不会提交到 GitHub。
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link href="/resource-library/items" className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-black text-white">
@@ -54,7 +54,7 @@ export default function ResourceLibraryPage() {
             </div>
             <div>
               <p className="text-sm font-bold text-slate-500">Resource root</p>
-              <p className="mt-1 break-all text-lg font-black text-slate-950">{health?.resourceRoot ?? "未扫描"}</p>
+              <p className="mt-1 break-all text-lg font-black text-slate-950">{health?.resourceRoot ?? "尚未扫描"}</p>
               <p className="mt-2 text-sm text-slate-600">总文件数：{health?.totalFiles ?? 0}</p>
             </div>
           </div>
