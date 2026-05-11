@@ -13,6 +13,8 @@
     "import:papers": "tsx scripts/index-resources.ts",
     "import:magazines": "tsx scripts/index-resources.ts",
     "import:reading": "tsx scripts/import-reading.ts",
+    "import:scenario-reading": "tsx scripts/import-scenario-reading.ts",
+    "import:foreign": "tsx scripts/import-scenario-reading.ts",
     "index:resources": "tsx scripts/index-resources.ts",
     "crawl:readings": "node scripts/crawl-readings.mjs",
     "parse:readings": "node scripts/parse-reading-file.mjs",

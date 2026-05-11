@@ -7,6 +7,7 @@ export type SourceLayer =
   | "listening_survival"
   | "reading_paraphrase"
   | "foreign_press_reading"
+  | "scenario_reading"
   | "collocation";
 
 export type ErrorType =
@@ -679,4 +680,94 @@ export type ReadingAnswerKey = {
   }[];
   status: "ready" | "needs_review";
   warnings: string[];
+};
+
+export type ScenarioReadingArticle = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  author?: string;
+  sourceName?: string;
+  sourceType: "magazine" | "foreign_reading" | "user_note" | "sample" | "unknown";
+  sourceResourceId?: string;
+  sourceFileName?: string;
+  sourcePath?: string;
+  importedAt: string;
+  topicTags: IELTSTopicRoute[];
+  scenarioTags: string[];
+  missionUseCases: string[];
+  skillTags: (
+    | "contextual_reading"
+    | "vocabulary_in_context"
+    | "difficult_sentence"
+    | "background_knowledge"
+    | "expression_collection"
+    | "author_viewpoint"
+  )[];
+  level: "B1" | "B2" | "C1";
+  wordCount: number;
+  estimatedMinutes: number;
+  summary?: string;
+  backgroundNote?: string;
+  paragraphs: ScenarioReadingParagraph[];
+  keyVocabulary: ScenarioVocabularyItem[];
+  usefulExpressions: UsefulExpression[];
+  difficultSentences: ScenarioDifficultSentence[];
+  readingPrompts: ScenarioReadingPrompt[];
+  status: "ready" | "needs_review";
+  warnings: string[];
+};
+
+export type ScenarioReadingParagraph = {
+  id: string;
+  articleId: string;
+  index: number;
+  text: string;
+  gist?: string;
+  functionTag?: "background" | "claim" | "evidence" | "contrast" | "example" | "conclusion" | "problem" | "solution" | "unknown";
+};
+
+export type ScenarioVocabularyItem = {
+  id: string;
+  articleId: string;
+  paragraphId?: string;
+  word: string;
+  phrase?: string;
+  chineseMeaning?: string;
+  englishDefinition?: string;
+  sourceSentence: string;
+  topicTags: IELTSTopicRoute[];
+  addToVocabularyQuest: boolean;
+};
+
+export type UsefulExpression = {
+  id: string;
+  articleId: string;
+  paragraphId?: string;
+  expression: string;
+  sourceSentence: string;
+  chineseMeaning?: string;
+  usageNote?: string;
+  tags: string[];
+};
+
+export type ScenarioDifficultSentence = {
+  id: string;
+  articleId: string;
+  paragraphId?: string;
+  sentence: string;
+  structureNote: string;
+  chineseExplanation?: string;
+  targetGrammar?: string[];
+  difficulty: 1 | 2 | 3 | 4 | 5;
+};
+
+export type ScenarioReadingPrompt = {
+  id: string;
+  articleId: string;
+  paragraphId?: string;
+  type: "gist" | "takeaway" | "connection_to_mission" | "vocabulary_notice" | "expression_notice" | "viewpoint_notice";
+  prompt: string;
+  suggestedAnswer?: string;
+  isReflective: boolean;
 };

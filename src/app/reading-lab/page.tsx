@@ -1,35 +1,45 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpenCheck, Database, Newspaper, RotateCcw } from "lucide-react";
+import { ArrowRight, BookOpenCheck, BookmarkPlus, Database, FileText, Lightbulb } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
-import { getReadingProgressMap, getSavedReadingWords } from "@/lib/readingStorage";
-import { useReadings } from "@/lib/useReadings";
+import {
+  getSavedExpressions,
+  getSavedScenarioSentences,
+  getSavedScenarioWords,
+  getScenarioTakeaways,
+} from "@/lib/scenarioReadingStorage";
+import { useScenarioReadings } from "@/lib/useScenarioReadings";
 
-const routeLabels = {
-  society_ideas: "人文社科",
-  technology_civilization: "科技史",
-  world_order_power: "国际政治",
-  economics_globalization: "经济全球化",
-  science_environment: "科学与环境",
-  general: "通用主题",
+const topicLabels: Record<string, string> = {
+  science_technology: "科学与技术",
+  art_culture: "艺术与文化",
+  environment_nature: "环境与自然",
+  education_learning: "教育与学习",
+  health_lifestyle: "健康与生活方式",
+  work_business: "工作与商业",
+  cities_transport: "城市与交通",
+  media_communication: "媒体与交流",
+  history_society: "历史与社会",
+  travel_daily_services: "旅行与日常服务",
 };
 
 export default function ReadingLabPage() {
-  const readings = useReadings();
-  const articles = readings.articles;
+  const scenario = useScenarioReadings();
+  const articles = scenario.articles;
   const today = articles[0];
-  const progress = typeof window === "undefined" ? {} : getReadingProgressMap();
-  const savedWords = typeof window === "undefined" ? [] : getSavedReadingWords();
-  const completedCount = Object.values(progress).filter((item) => item.completedAt).length;
+  const savedWords = typeof window === "undefined" ? [] : getSavedScenarioWords();
+  const savedExpressions = typeof window === "undefined" ? [] : getSavedExpressions();
+  const savedSentences = typeof window === "undefined" ? [] : getSavedScenarioSentences();
+  const takeaways = typeof window === "undefined" ? [] : getScenarioTakeaways();
 
   return (
     <AppShell>
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Foreign Press Reading Lab</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">外刊精读实验室</h1>
+        <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Scenario Reading Library</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">情景阅读扩展</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          把外刊文章转化成 IELTS Reading 训练：主旨、同义替换、TFNG、作者态度、长难句和生词复盘。
+          这里不是再做一套题，而是用真实语境补强 Mission：读短摘录、理解背景、保存表达、积累词汇和长难句。
         </p>
       </section>
 
@@ -37,17 +47,17 @@ export default function ReadingLabPage() {
         <section className="rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm">
           <div className="flex items-start gap-4">
             <div className="rounded-2xl bg-indigo-50 p-3 text-indigo-700">
-              <Newspaper size={24} />
+              <BookOpenCheck size={24} />
             </div>
             <div className="flex-1">
-          <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Today&apos;s Reading</p>
-              <h2 className="mt-2 text-2xl font-black text-slate-950">{today?.title ?? "暂无文章"}</h2>
-              {today && (
+              <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Today&apos;s Scenario Reading</p>
+              <h2 className="mt-2 text-2xl font-black text-slate-950">{today?.title ?? "暂无情景阅读"}</h2>
+              {today ? (
                 <>
                   <p className="mt-2 text-sm leading-6 text-slate-600">{today.summary}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <Badge>{today.publication}</Badge>
-                    <Badge>{routeLabels[today.interestRoute]}</Badge>
+                    <Badge>{today.sourceName ?? "Scenario source"}</Badge>
+                    <Badge>{today.topicTags.map((tag) => topicLabels[tag] ?? tag).join(" / ")}</Badge>
                     <Badge>{today.level}</Badge>
                     <Badge>{today.estimatedMinutes} min</Badge>
                   </div>
@@ -55,27 +65,28 @@ export default function ReadingLabPage() {
                     href={`/reading-lab/${today.id}`}
                     className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white"
                   >
-                    Start Guided Reading
+                    Start Scenario Reading
                     <ArrowRight size={16} />
                   </Link>
                 </>
-              )}
+              ) : null}
             </div>
           </div>
         </section>
 
         <section className="grid gap-3">
-          <StatCard icon={Database} label="Articles loaded" value={articles.length} helper={readings.source} />
-          <StatCard icon={BookOpenCheck} label="Articles completed" value={completedCount} helper="progress persists locally" />
-          <StatCard icon={RotateCcw} label="Saved words" value={savedWords.length} helper="for Vocabulary Quest" />
+          <StatCard icon={Database} label="Scenario articles" value={articles.length} helper={scenario.source} />
+          <StatCard icon={BookmarkPlus} label="Saved words" value={savedWords.length} helper="for vocabulary review" />
+          <StatCard icon={Lightbulb} label="Saved expressions" value={savedExpressions.length} helper="for expression bank" />
+          <StatCard icon={FileText} label="Saved sentences" value={savedSentences.length + takeaways.length} helper="sentences + takeaways" />
         </section>
       </div>
 
       <section className="mt-6 grid gap-4 md:grid-cols-4">
-        <QuickLink href="/reading-lab/articles" title="Imported Articles" text="查看所有 sample 或私有导入文章。" />
-        <QuickLink href="/reading-lab/import" title="Import Workbench" text="查看 dry-run、小批量同步和生成阅读任务命令。" />
-        <QuickLink href="/reading-lab/sources" title="Reading Sources" text="启用来源、确认许可并查看同步命令。" />
-        <QuickLink href="/reading-lab/review" title="Reading Review" text="查看阅读错题、生词和长难句复盘。" />
+        <QuickLink href="/reading-lab/articles" title="Scenario Articles" text="查看本地或 sample 情景阅读素材。" />
+        <QuickLink href="/reading-lab/import" title="Import Workbench" text="查看情景阅读导入命令和输出文件。" />
+        <QuickLink href="/reading-lab/sources" title="Reading Sources" text="配置来源、许可确认和本地导入范围。" />
+        <QuickLink href="/reading-lab/review" title="Expression Review" text="查看保存的词、表达、长难句和 takeaway。" />
       </section>
     </AppShell>
   );

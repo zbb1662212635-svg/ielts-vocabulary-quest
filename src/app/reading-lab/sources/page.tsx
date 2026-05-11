@@ -40,10 +40,10 @@ export default function ReadingSourcesPage() {
   return (
     <AppShell>
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Reading Sources</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">外刊来源配置</h1>
+        <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Scenario Reading Sources</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">情景阅读来源配置</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          当前实现使用 GitHub API 读取公开仓库文件，不抓取 HTML，不绕过登录、付费墙或 DRM。启用前需要确认你有权导入该来源。
+          外部阅读材料只用于个人学习的真实语境扩展。系统会记录来源信息，不绕过登录、付费墙或 DRM。
         </p>
       </section>
 
@@ -62,19 +62,12 @@ export default function ReadingSourcesPage() {
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <InfoBlock label="Allowed paths" value={source.allowedPaths.join(", ")} />
           <InfoBlock label="Allowed extensions" value={source.allowedExtensions.join(", ")} />
-          <InfoBlock label="Default sync limit" value={`${settings.readingSources.maxArticlesPerSync} files`} />
+          <InfoBlock label="Scenario output" value="context, expressions, sentences, prompts" />
         </div>
 
         <label className="mt-6 flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-          <input
-            type="checkbox"
-            checked={consent}
-            onChange={(event) => updateConsent(event.target.checked)}
-            className="mt-1"
-          />
-          <span>
-            I confirm I have the right to import and use this source for my study. Source metadata and license notes will be stored with imported files.
-          </span>
+          <input type="checkbox" checked={consent} onChange={(event) => updateConsent(event.target.checked)} className="mt-1" />
+          <span>I confirm I have the right to import and use this source for my personal study.</span>
         </label>
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -95,14 +88,10 @@ export default function ReadingSourcesPage() {
       </section>
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-2xl font-black text-slate-950">同步命令</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          第一轮建议先 dry-run，确认文件列表后再下载少量文件。
-        </p>
+        <h2 className="text-2xl font-black text-slate-950">本地导入命令</h2>
         <pre className="mt-4 overflow-auto rounded-2xl bg-slate-950 p-4 text-sm font-semibold text-slate-100">
-{`npm run crawl:readings -- --source awesome_english_ebooks --magazine economist --limit 10 --dry-run
-npm run crawl:readings -- --source awesome_english_ebooks --magazine economist --limit 10
-npm run build:reading-sessions`}
+{`npm run import:scenario-reading
+npm run import:scenario-reading -- --input "C:/Users/zhangbinbin/Desktop/学英语/foreign-reading"`}
         </pre>
       </section>
     </AppShell>

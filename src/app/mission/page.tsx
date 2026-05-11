@@ -8,6 +8,8 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpenCheck,
+  BookmarkPlus,
+  CheckCircle2,
   ClipboardList,
   FileText,
   Headphones,
@@ -21,11 +23,29 @@ import { topicRouteLabels } from "@/data/ielts-missions.sample";
 import { getSafeTodayMission, isFallbackMission } from "@/lib/missionLoader";
 import { detectDictationError, isAnswerCorrect } from "@/lib/normalizer";
 import { getReadingCoachFeedback, readingErrorType } from "@/lib/readingCoach";
+import {
+  saveExpression,
+  saveScenarioSentence,
+  saveScenarioTakeaway,
+  saveScenarioWord,
+} from "@/lib/scenarioReadingStorage";
 import { applyAttempt } from "@/lib/scoring";
 import { getProgressMap, saveAttempt, saveProgressMap, upsertReviewItem } from "@/lib/storage";
-import type { DictationItem, ErrorType, IELTSMission, IELTSReadingQuestion, MissionStage, ReadingPassage, ReadingQuestion, TrainingAttempt, VocabularyItem } from "@/lib/types";
+import type {
+  DictationItem,
+  ErrorType,
+  IELTSMission,
+  IELTSReadingQuestion,
+  MissionStage,
+  ReadingPassage,
+  ReadingQuestion,
+  ScenarioReadingArticle,
+  TrainingAttempt,
+  VocabularyItem,
+} from "@/lib/types";
 import { useDictationItems } from "@/lib/useDictationItems";
 import { useReadingAssets } from "@/lib/useReadingAssets";
+import { useScenarioReadings } from "@/lib/useScenarioReadings";
 import { useVocabulary } from "@/lib/useVocabulary";
 
 const CURRENT_MISSION_ID_KEY = "ielts-mission-lab:currentMissionId";
@@ -37,7 +57,7 @@ const stageMeta: Record<MissionStage, { label: string; icon: LucideIcon }> = {
   vocabulary_loadout: { label: "词汇装备", icon: PackageCheck },
   listening_scene: { label: "听力场景", icon: Headphones },
   reading_task: { label: "阅读任务", icon: BookOpenCheck },
-  foreign_press_extension: { label: "外刊拓展", icon: FileText },
+  foreign_press_extension: { label: "情景阅读扩展", icon: FileText },
   debrief: { label: "任务复盘", icon: ClipboardList },
 };
 
@@ -53,7 +73,9 @@ function MissionExperience() {
   const vocabularyData = useVocabulary();
   const privateDictationItems = useDictationItems();
   const readingAssets = useReadingAssets();
-  const mission = useMemo(
+  const scenarioData = useScenarioReadings();
+
+  const baseMission = useMemo(
     () =>
       enrichMissionWithReading(
         enrichMissionWithVocabulary(getSafeTodayMission(), vocabularyData.items, privateDictationItems),
@@ -62,6 +84,9 @@ function MissionExperience() {
       ),
     [privateDictationItems, readingAssets.passages, readingAssets.questions, vocabularyData.items],
   );
+  const scenarioArticle = useMemo(() => selectScenarioArticle(baseMission, scenarioData.articles), [baseMission, scenarioData.articles]);
+  const mission = useMemo(() => enrichMissionWithScenario(baseMission, scenarioArticle), [baseMission, scenarioArticle]);
+
   const route = topicRouteLabels[mission.topicRoute];
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -72,8 +97,9 @@ function MissionExperience() {
   const [dictationSubmitted, setDictationSubmitted] = useState<Record<string, boolean>>({});
   const [readingAnswers, setReadingAnswers] = useState<Record<string, string>>({});
   const [readingSubmitted, setReadingSubmitted] = useState<Record<string, boolean>>({});
-  const [foreignAnswer, setForeignAnswer] = useState("");
-  const [foreignSubmitted, setForeignSubmitted] = useState(false);
+  const [savedScenarioItems, setSavedScenarioItems] = useState<Record<string, boolean>>({});
+  const [takeaway, setTakeaway] = useState("");
+  const [takeawaySaved, setTakeawaySaved] = useState(false);
 
   const stageParam = searchParams.get("stage");
   const activeStage = getActiveStage(stageParam, mission.stages);
@@ -83,7 +109,6 @@ function MissionExperience() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
     const savedMissionId = window.localStorage.getItem(CURRENT_MISSION_ID_KEY);
     const savedStage = window.localStorage.getItem(CURRENT_STAGE_KEY);
     const hasInvalidStage = !stageParam || !isMissionStage(stageParam) || !mission.stages.includes(stageParam);
@@ -144,22 +169,16 @@ function MissionExperience() {
     [mission.readingTask.questions, readingAnswers, readingSubmitted],
   );
 
-  const foreignCorrectAnswer = mission.foreignPressExtension.authorViewpoint;
-  const foreignIsCorrect = foreignSubmitted && isAnswerCorrect(foreignAnswer, foreignCorrectAnswer);
   const vocabAccuracy = percent(countCorrect(vocabResults), countSubmitted(vocabResults));
   const dictationAccuracy = percent(countCorrect(dictationResults), countSubmitted(dictationResults));
-  const readingAccuracy = percent(
-    countCorrect(readingResults) + (foreignIsCorrect ? 1 : 0),
-    countSubmitted(readingResults) + (foreignSubmitted ? 1 : 0),
-  );
+  const readingAccuracy = percent(countCorrect(readingResults), countSubmitted(readingResults));
   const mistakeCount =
     countSubmitted(vocabResults) -
     countCorrect(vocabResults) +
     countSubmitted(dictationResults) -
     countCorrect(dictationResults) +
     countSubmitted(readingResults) -
-    countCorrect(readingResults) +
-    (foreignSubmitted && !foreignIsCorrect ? 1 : 0);
+    countCorrect(readingResults);
 
   function goToStage(index: number) {
     const nextStage = mission.stages[index] ?? "mission_brief";
@@ -280,36 +299,25 @@ function MissionExperience() {
     setReadingSubmitted((current) => ({ ...current, [question.id]: true }));
   }
 
-  function submitForeignPress() {
-    if (!foreignAnswer || foreignSubmitted) return;
-    const isCorrect = isAnswerCorrect(foreignAnswer, foreignCorrectAnswer);
-    const errorType: ErrorType | undefined = isCorrect ? undefined : "author_attitude_error";
-    const createdAt = new Date().toISOString();
-    saveAttemptWithProgress(
-      {
-        id: `mission_foreign_${createdAt}_${mission.id}`,
-        wordId: `mission_${mission.id}_foreign_press`,
-        mode: "reading_lab",
-        prompt: "Choose the writer's viewpoint in the foreign press extension.",
-        userAnswer: foreignAnswer,
-        correctAnswer: foreignCorrectAnswer,
-        isCorrect,
-        errorType,
-        createdAt,
-      },
-      errorType,
-    );
-    setForeignSubmitted(true);
+  function saveScenario(id: string, action: () => void) {
+    action();
+    setSavedScenarioItems((current) => ({ ...current, [id]: true }));
+  }
+
+  function saveMissionTakeaway() {
+    if (!scenarioArticle || !takeaway.trim()) return;
+    saveScenarioTakeaway({ articleId: scenarioArticle.id, missionId: mission.id, text: takeaway.trim() });
+    setTakeawaySaved(true);
   }
 
   return (
     <AppShell>
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        {showDebugWarning && (
+        {showDebugWarning ? (
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
             Mission data issue detected, fallback mission active.
           </div>
-        )}
+        ) : null}
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
           <div>
             <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">
@@ -339,10 +347,10 @@ function MissionExperience() {
         <div className="mt-5 flex flex-wrap gap-3">
           <Link href="/" className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700">
             <ArrowLeft size={16} />
-            Back to Dashboard
+            返回首页
           </Link>
           <button onClick={nextStage} className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white">
-            Next Stage
+            下一阶段
             <ArrowRight size={16} />
           </button>
         </div>
@@ -372,7 +380,7 @@ function MissionExperience() {
       </div>
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        {activeStage === "mission_brief" && (
+        {activeStage === "mission_brief" ? (
           <StageSection eyebrow="Mission Brief" title="任务简报" onNext={nextStage}>
             <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
               <Panel title="任务目标">{mission.taskGoal}</Panel>
@@ -388,10 +396,10 @@ function MissionExperience() {
               </div>
             </div>
           </StageSection>
-        )}
+        ) : null}
 
-        {activeStage === "vocabulary_loadout" && (
-          <StageSection eyebrow="Vocabulary Loadout" title="词汇装备：用场景词完成任务准备" onNext={nextStage}>
+        {activeStage === "vocabulary_loadout" ? (
+          <StageSection eyebrow="Vocabulary Loadout" title="词汇装备：先拿到完成任务的语言工具" onNext={nextStage}>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {vocabResults.map((result) => {
                 const options = [result.correctAnswer, "opposite meaning", "unrelated detail"];
@@ -400,9 +408,7 @@ function MissionExperience() {
                     <h3 className="text-xl font-black text-slate-950">{result.word.word}</h3>
                     <p className="mt-1 text-sm font-bold text-indigo-700">{result.word.chineseMeaning}</p>
                     <p className="mt-3 text-sm leading-6 text-slate-600">{result.word.englishDefinition}</p>
-                    <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm leading-6 text-slate-700">
-                      {result.word.exampleSentence}
-                    </p>
+                    <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm leading-6 text-slate-700">{result.word.exampleSentence}</p>
                     <p className="mt-3 text-sm leading-6 text-slate-600">{result.word.ieltsUsageNote}</p>
                     <p className="mt-4 text-sm font-bold text-slate-950">IELTS Reading 中，哪个表达可以替换它？</p>
                     <div className="mt-3 grid gap-2">
@@ -412,9 +418,7 @@ function MissionExperience() {
                           disabled={result.submitted}
                           onClick={() => setVocabAnswers((current) => ({ ...current, [result.word.id]: option }))}
                           className={`rounded-2xl border px-3 py-2 text-left text-sm font-bold ${
-                            result.answer === option
-                              ? "border-indigo-300 bg-indigo-50 text-indigo-800"
-                              : "border-slate-200 bg-white text-slate-700"
+                            result.answer === option ? "border-indigo-300 bg-indigo-50 text-indigo-800" : "border-slate-200 bg-white text-slate-700"
                           }`}
                         >
                           {option}
@@ -428,7 +432,7 @@ function MissionExperience() {
                     >
                       提交
                     </button>
-                    {result.submitted && (
+                    {result.submitted ? (
                       <Feedback
                         ok={result.isCorrect}
                         text={
@@ -437,15 +441,15 @@ function MissionExperience() {
                             : `正确替换是：${result.correctAnswer}。这类错误会进入 Review Room 复盘。`
                         }
                       />
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
             </div>
           </StageSection>
-        )}
+        ) : null}
 
-        {activeStage === "listening_scene" && (
+        {activeStage === "listening_scene" ? (
           <StageSection eyebrow="Listening Scene" title={mission.listeningScene.title} onNext={nextStage}>
             <p className="mb-5 text-sm leading-6 text-slate-600">{mission.listeningScene.briefing}</p>
             <div className="grid gap-4 md:grid-cols-2">
@@ -464,11 +468,9 @@ function MissionExperience() {
                   <input
                     value={result.answer}
                     disabled={result.submitted}
-                    onChange={(event) =>
-                      setDictationAnswers((current) => ({ ...current, [result.item.id]: event.target.value }))
-                    }
+                    onChange={(event) => setDictationAnswers((current) => ({ ...current, [result.item.id]: event.target.value }))}
                     className="mt-4 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-indigo-300"
-                    placeholder="输入你听到的单词"
+                    placeholder="输入你听到的内容"
                   />
                   <button
                     onClick={() => submitDictation(result.item.id)}
@@ -477,7 +479,7 @@ function MissionExperience() {
                   >
                     提交
                   </button>
-                  {result.submitted && (
+                  {result.submitted ? (
                     <Feedback
                       ok={result.isCorrect}
                       text={
@@ -486,16 +488,16 @@ function MissionExperience() {
                           : `正确答案：${result.item.answer}。${result.item.contextNote} Listening 填空题中拼写错误不得分。`
                       }
                     />
-                  )}
+                  ) : null}
                 </div>
               ))}
             </div>
           </StageSection>
-        )}
+        ) : null}
 
-        {activeStage === "reading_task" && (
-          <StageSection eyebrow="Reading Task" title={mission.readingTask.title} onNext={nextStage}>
-            <p className="rounded-2xl bg-slate-50 p-5 text-base leading-8 text-slate-800">{mission.readingTask.text}</p>
+        {activeStage === "reading_task" ? (
+          <StageSection eyebrow="IELTS Reading Task" title={mission.readingTask.title} onNext={nextStage}>
+            <p className="rounded-2xl bg-slate-50 p-5 text-base leading-8 text-slate-800 whitespace-pre-line">{mission.readingTask.text}</p>
             <div className="mt-5 space-y-4">
               {readingResults.map((result) => (
                 <div key={result.question.id} className="rounded-2xl border border-slate-200 p-5">
@@ -507,9 +509,7 @@ function MissionExperience() {
                         disabled={result.submitted}
                         onClick={() => setReadingAnswers((current) => ({ ...current, [result.question.id]: option }))}
                         className={`rounded-2xl border px-4 py-3 text-left text-sm font-bold ${
-                          result.answer === option
-                            ? "border-indigo-300 bg-indigo-50 text-indigo-800"
-                            : "border-slate-200 bg-white text-slate-700"
+                          result.answer === option ? "border-indigo-300 bg-indigo-50 text-indigo-800" : "border-slate-200 bg-white text-slate-700"
                         }`}
                       >
                         {option}
@@ -523,82 +523,87 @@ function MissionExperience() {
                   >
                     提交
                   </button>
-                  {result.submitted && (
-                    <div
-                      className={`mt-4 rounded-2xl p-4 text-sm leading-6 ${
-                        result.isCorrect ? "bg-emerald-50 text-emerald-900" : "bg-rose-50 text-rose-900"
-                      }`}
-                    >
-                      <div className="font-black">
-                        {result.isCorrect ? "答对了" : `正确答案：${result.question.correctAnswer}`}
-                      </div>
+                  {result.submitted ? (
+                    <div className={`mt-4 rounded-2xl p-4 text-sm leading-6 ${result.isCorrect ? "bg-emerald-50 text-emerald-900" : "bg-rose-50 text-rose-900"}`}>
+                      <div className="font-black">{result.isCorrect ? "答对了" : `正确答案：${result.question.correctAnswer}`}</div>
                       <p className="mt-1">{getReadingCoachFeedback(result.question, result.isCorrect)}</p>
                       <p className="mt-2 font-semibold">证据句：{result.question.evidenceText}</p>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ))}
             </div>
           </StageSection>
-        )}
+        ) : null}
 
-        {activeStage === "foreign_press_extension" && (
-          <StageSection eyebrow="Foreign Press Extension" title={mission.foreignPressExtension.title} onNext={nextStage}>
-            <p className="rounded-2xl bg-slate-50 p-5 text-base leading-8 text-slate-800">
-              {mission.foreignPressExtension.excerpt}
+        {activeStage === "foreign_press_extension" ? (
+          <StageSection eyebrow="Scenario Reading Extension" title={scenarioArticle?.title ?? mission.foreignPressExtension.title} onNext={nextStage}>
+            <p className="mb-5 text-sm leading-6 text-slate-600">
+              这一段不是考试题。它用于把你带进真实英语语境：读摘录、理解背景、保存表达和长难句，然后写一个 takeaway。
             </p>
-            <div className="mt-5 rounded-2xl bg-indigo-50 p-5">
-              <div className="text-sm font-black text-indigo-950">长难句拆解</div>
-              <p className="mt-2 text-base font-bold leading-7 text-slate-950">
-                {mission.foreignPressExtension.difficultSentence.sentence}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-indigo-900">
-                {mission.foreignPressExtension.difficultSentence.structureNote}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-700">
-                {mission.foreignPressExtension.difficultSentence.chineseExplanation}
-              </p>
-            </div>
-            <div className="mt-5 rounded-2xl border border-slate-200 p-5">
-              <div className="text-sm font-black text-slate-950">作者观点更接近哪一项？</div>
-              <div className="mt-3 grid gap-2">
-                {[
-                  foreignCorrectAnswer,
-                  "The writer focuses only on entertainment.",
-                  "The writer rejects the topic completely.",
-                ].map((option) => (
-                  <button
-                    key={option}
-                    disabled={foreignSubmitted}
-                    onClick={() => setForeignAnswer(option)}
-                    className={`rounded-2xl border px-4 py-3 text-left text-sm font-bold ${
-                      foreignAnswer === option
-                        ? "border-indigo-300 bg-indigo-50 text-indigo-800"
-                        : "border-slate-200 bg-white text-slate-700"
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
+            <p className="rounded-2xl bg-slate-50 p-5 text-base leading-8 text-slate-800 whitespace-pre-line">
+              {scenarioArticle ? scenarioArticle.paragraphs.map((item) => item.text).join("\n\n") : mission.foreignPressExtension.excerpt}
+            </p>
+
+            {scenarioArticle ? (
+              <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                <ScenarioPanel title="情景词">
+                  {scenarioArticle.keyVocabulary.slice(0, 5).map((word) => (
+                    <SaveLine
+                      key={word.id}
+                      title={word.word}
+                      text={word.chineseMeaning ?? word.sourceSentence}
+                      saved={Boolean(savedScenarioItems[word.id])}
+                      onSave={() => saveScenario(word.id, () => saveScenarioWord(word))}
+                    />
+                  ))}
+                </ScenarioPanel>
+                <ScenarioPanel title="可积累表达">
+                  {scenarioArticle.usefulExpressions.slice(0, 5).map((expression) => (
+                    <SaveLine
+                      key={expression.id}
+                      title={expression.expression}
+                      text={expression.chineseMeaning ?? expression.usageNote ?? expression.sourceSentence}
+                      saved={Boolean(savedScenarioItems[expression.id])}
+                      onSave={() => saveScenario(expression.id, () => saveExpression(expression))}
+                    />
+                  ))}
+                </ScenarioPanel>
+                <ScenarioPanel title="长难句">
+                  {scenarioArticle.difficultSentences.slice(0, 2).map((sentence) => (
+                    <SaveLine
+                      key={sentence.id}
+                      title={sentence.sentence}
+                      text={sentence.structureNote}
+                      saved={Boolean(savedScenarioItems[sentence.id])}
+                      onSave={() => saveScenario(sentence.id, () => saveScenarioSentence(sentence))}
+                    />
+                  ))}
+                </ScenarioPanel>
               </div>
+            ) : null}
+
+            <div className="mt-5 rounded-2xl border border-slate-200 p-5">
+              <div className="text-sm font-black text-slate-950">Takeaway</div>
+              <p className="mt-2 text-sm leading-6 text-slate-600">这段真实材料给今天的场景任务补充了什么？写 1-2 句即可。</p>
+              <textarea
+                value={takeaway}
+                onChange={(event) => setTakeaway(event.target.value)}
+                className="mt-4 min-h-28 w-full rounded-2xl border border-slate-200 p-4 text-sm leading-6 outline-none focus:border-indigo-300"
+                placeholder="例如：Student accommodation is not only about choosing a room; it also reflects supply, affordability and pressure on local services."
+              />
               <button
-                onClick={submitForeignPress}
-                disabled={!foreignAnswer || foreignSubmitted}
-                className="mt-4 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-white disabled:bg-slate-300"
+                disabled={!takeaway.trim() || takeawaySaved || !scenarioArticle}
+                onClick={saveMissionTakeaway}
+                className="mt-3 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-white disabled:bg-slate-300"
               >
-                提交
+                {takeawaySaved ? "Takeaway 已保存" : "保存 Takeaway"}
               </button>
-              {foreignSubmitted && (
-                <Feedback
-                  ok={foreignIsCorrect}
-                  text={foreignIsCorrect ? "作者观点判断正确。" : `正确观点：${foreignCorrectAnswer}`}
-                />
-              )}
             </div>
           </StageSection>
-        )}
+        ) : null}
 
-        {activeStage === "debrief" && (
+        {activeStage === "debrief" ? (
           <StageSection eyebrow="Debrief Report" title={`任务完成：${mission.title}`} onNext={nextStage} nextLabel="保持在复盘页">
             <div className="grid gap-4 md:grid-cols-4">
               <ReportStat label="词汇正确率" value={vocabAccuracy} suffix="%" />
@@ -607,16 +612,24 @@ function MissionExperience() {
               <ReportStat label="新增错因" value={mistakeCount} />
             </div>
             <div className="mt-5 rounded-2xl bg-slate-50 p-5 text-sm leading-7 text-slate-700">
-              <div className="font-black text-slate-950">下一步</div>
+              <div className="font-black text-slate-950">Scenario Reading Takeaway</div>
               <p className="mt-1">
-                系统已经把本任务中的错词、听写错误、阅读错因写入 Review Room。下次学习时，先复盘这些项目，再进入新的 IELTS 场景任务。
+                {takeawaySaved
+                  ? "你的情景阅读 takeaway 已保存到 Scenario Reading Review。"
+                  : "你可以回到情景阅读扩展，保存一个 takeaway、表达或长难句。"}
               </p>
+              <p className="mt-2">错词、听写错误和阅读错因会进入 Review Room；情景阅读保存项会进入表达和长难句复盘。</p>
             </div>
-            <Link href="/review" className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">
-              查看 Review Room
-            </Link>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/review" className="inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">
+                查看 Review Room
+              </Link>
+              <Link href="/reading-lab/review" className="inline-flex rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white">
+                查看情景阅读沉淀
+              </Link>
+            </div>
           </StageSection>
-        )}
+        ) : null}
       </section>
     </AppShell>
   );
@@ -637,7 +650,7 @@ function StageSection({
   title,
   children,
   onNext,
-  nextLabel = "Next Stage",
+  nextLabel = "下一阶段",
 }: {
   eyebrow: string;
   title: string;
@@ -679,6 +692,31 @@ function ReportStat({ label, value, suffix = "" }: { label: string; value: numbe
         {suffix}
       </div>
       <div className="mt-1 text-xs font-bold text-slate-500">{label}</div>
+    </div>
+  );
+}
+
+function ScenarioPanel({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 p-4">
+      <h3 className="text-base font-black text-slate-950">{title}</h3>
+      <div className="mt-3 space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function SaveLine({ title, text, saved, onSave }: { title: string; text: string; saved: boolean; onSave: () => void }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-black text-slate-950">{title}</div>
+          <div className="mt-1 text-xs leading-5 text-slate-600">{text}</div>
+        </div>
+        <button onClick={onSave} className="rounded-xl bg-white p-2 text-indigo-700">
+          {saved ? <CheckCircle2 size={16} /> : <BookmarkPlus size={16} />}
+        </button>
+      </div>
     </div>
   );
 }
@@ -802,16 +840,11 @@ function selectMissionVocabulary(mission: IELTSMission, vocabulary: VocabularyIt
   const usable = vocabulary.filter((item) => item.word);
   const topicMatched = usable.filter((item) => item.topicTags.includes(mission.topicRoute));
   const pool = topicMatched.length >= count ? topicMatched : [...topicMatched, ...usable.filter((item) => !topicMatched.includes(item))];
-  return pool
-    .sort((a, b) => scoreVocabularyForMission(b, mission) - scoreVocabularyForMission(a, mission))
-    .slice(0, count);
+  return pool.sort((a, b) => scoreVocabularyForMission(b, mission) - scoreVocabularyForMission(a, mission)).slice(0, count);
 }
 
 function selectDictationVocabulary(mission: IELTSMission, vocabulary: VocabularyItem[], count: number) {
-  return vocabulary
-    .filter((item) => item.word)
-    .sort((a, b) => scoreDictationVocabulary(b, mission) - scoreDictationVocabulary(a, mission))
-    .slice(0, count);
+  return vocabulary.filter((item) => item.word).sort((a, b) => scoreDictationVocabulary(b, mission) - scoreDictationVocabulary(a, mission)).slice(0, count);
 }
 
 function scoreVocabularyForMission(item: VocabularyItem, mission: IELTSMission) {
@@ -881,5 +914,36 @@ function convertIELTSQuestion(question: IELTSReadingQuestion): ReadingQuestion {
     evidenceText: question.evidenceText,
     skillTags: question.skillTags,
     difficulty: question.difficulty,
+  };
+}
+
+function selectScenarioArticle(mission: IELTSMission, articles: ScenarioReadingArticle[]) {
+  if (!articles.length) return undefined;
+  return (
+    articles.find((item) => item.missionUseCases.includes(mission.id) && item.status === "ready") ??
+    articles.find((item) => item.topicTags.includes(mission.topicRoute) && item.status === "ready") ??
+    articles.find((item) => item.status === "ready") ??
+    articles[0]
+  );
+}
+
+function enrichMissionWithScenario(mission: IELTSMission, article?: ScenarioReadingArticle): IELTSMission {
+  if (!article) return mission;
+  return {
+    ...mission,
+    foreignPressExtension: {
+      title: article.title,
+      articleId: article.id,
+      excerpt: article.paragraphs.map((item) => item.text).join("\n\n"),
+      difficultSentence: {
+        id: article.difficultSentences[0]?.id ?? `${article.id}_sentence`,
+        articleId: article.id,
+        paragraphId: article.difficultSentences[0]?.paragraphId ?? article.paragraphs[0]?.id ?? article.id,
+        sentence: article.difficultSentences[0]?.sentence ?? article.paragraphs[0]?.text ?? "",
+        structureNote: article.difficultSentences[0]?.structureNote ?? "Read for main clause first, then supporting details.",
+        chineseExplanation: article.difficultSentences[0]?.chineseExplanation ?? "先抓主干，再看修饰和补充信息。",
+      },
+      authorViewpoint: article.summary ?? "This scenario reading provides real-world context for the mission.",
+    },
   };
 }

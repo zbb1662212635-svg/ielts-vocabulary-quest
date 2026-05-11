@@ -16,11 +16,7 @@ type VocabularyImportHealth = {
   needsReviewCount: number;
   duplicateCount: number;
   lastImportedAt: string | null;
-  report?: {
-    parsedFiles?: number;
-    unsupportedFiles?: unknown[];
-    topWarnings?: Array<{ warning: string; count: number }>;
-  } | null;
+  report?: { parsedFiles?: number; unsupportedFiles?: unknown[] } | null;
 };
 
 type ListeningImportHealth = {
@@ -33,9 +29,7 @@ type ListeningImportHealth = {
   dictationItems: number;
   needsReview: number;
   lastImportedAt: string | null;
-  report?: {
-    warnings?: string[];
-  } | null;
+  report?: { warnings?: string[] } | null;
 };
 
 type ReadingImportHealth = {
@@ -48,12 +42,21 @@ type ReadingImportHealth = {
   questionsNeedingReview: number;
   needsReview: number;
   lastImportedAt: string | null;
-  report?: {
-    readingFilesDetected?: number;
-    answerKeyFilesDetected?: number;
-    unsupportedFiles?: unknown[];
-    warnings?: string[];
-  } | null;
+  report?: { readingFilesDetected?: number; answerKeyFilesDetected?: number; unsupportedFiles?: unknown[]; warnings?: string[] } | null;
+};
+
+type ScenarioReadingHealth = {
+  imported: boolean;
+  articles: number;
+  readyArticles: number;
+  articlesNeedingReview: number;
+  keyVocabulary: number;
+  usefulExpressions: number;
+  difficultSentences: number;
+  scenarioPrompts: number;
+  needsReview: number;
+  lastImportedAt: string | null;
+  report?: { foreignReadingFilesDetected?: number; unsupportedFiles?: unknown[]; warnings?: string[] } | null;
 };
 
 const expectedFolders = [
@@ -72,6 +75,7 @@ export default function ResourceHealthPage() {
   const [vocabHealth, setVocabHealth] = useState<VocabularyImportHealth | null>(null);
   const [listeningHealth, setListeningHealth] = useState<ListeningImportHealth | null>(null);
   const [readingHealth, setReadingHealth] = useState<ReadingImportHealth | null>(null);
+  const [scenarioHealth, setScenarioHealth] = useState<ScenarioReadingHealth | null>(null);
 
   useEffect(() => {
     fetch("/api/resource-health")
@@ -91,18 +95,10 @@ export default function ResourceHealthPage() {
           warnings: ["Resource health check failed."],
         }),
       );
-    fetch("/api/vocabulary-import-health")
-      .then((response) => response.json())
-      .then((data: VocabularyImportHealth) => setVocabHealth(data))
-      .catch(() => setVocabHealth(null));
-    fetch("/api/listening-health")
-      .then((response) => response.json())
-      .then((data: ListeningImportHealth) => setListeningHealth(data))
-      .catch(() => setListeningHealth(null));
-    fetch("/api/reading-health")
-      .then((response) => response.json())
-      .then((data: ReadingImportHealth) => setReadingHealth(data))
-      .catch(() => setReadingHealth(null));
+    fetch("/api/vocabulary-import-health").then((r) => r.json()).then(setVocabHealth).catch(() => setVocabHealth(null));
+    fetch("/api/listening-health").then((r) => r.json()).then(setListeningHealth).catch(() => setListeningHealth(null));
+    fetch("/api/reading-health").then((r) => r.json()).then(setReadingHealth).catch(() => setReadingHealth(null));
+    fetch("/api/scenario-reading-health").then((r) => r.json()).then(setScenarioHealth).catch(() => setScenarioHealth(null));
   }, []);
 
   return (
@@ -148,11 +144,7 @@ export default function ResourceHealthPage() {
               <div key={folder} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <FolderSearch className="text-indigo-600" size={22} />
-                  {detected ? (
-                    <CheckCircle2 className="text-emerald-600" size={20} />
-                  ) : (
-                    <AlertTriangle className="text-amber-600" size={20} />
-                  )}
+                  {detected ? <CheckCircle2 className="text-emerald-600" size={20} /> : <AlertTriangle className="text-amber-600" size={20} />}
                 </div>
                 <h2 className="mt-4 text-base font-black text-slate-950">{folder}</h2>
                 <p className="mt-2 text-xs font-bold text-slate-500">{detected ? "detected" : "missing"}</p>
@@ -166,58 +158,47 @@ export default function ResourceHealthPage() {
       <VocabularyHealthSection health={vocabHealth} resourceHealth={health} />
       <ListeningHealthSection health={listeningHealth} />
       <ReadingHealthSection health={readingHealth} resourceHealth={health} />
+      <ScenarioReadingHealthSection health={scenarioHealth} resourceHealth={health} />
     </AppShell>
   );
 }
 
-function VocabularyHealthSection({
-  health,
-  resourceHealth,
-}: {
-  health: VocabularyImportHealth | null;
-  resourceHealth: ResourceHealth | null;
-}) {
+function VocabularyHealthSection({ health, resourceHealth }: { health: VocabularyImportHealth | null; resourceHealth: ResourceHealth | null }) {
   return (
-    <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Vocabulary Import Health</p>
-      <h2 className="mt-2 text-2xl font-black text-slate-950">词汇导入健康状态</h2>
+    <HealthSection title="词汇导入健康状态" eyebrow="Vocabulary Import Health">
       {!health ? (
-        <p className="mt-3 text-sm text-slate-600">正在读取词汇导入报告...</p>
+        <p className="text-sm text-slate-600">正在读取词汇导入报告...</p>
       ) : !health.imported ? (
         <Warning>Private vocabulary has not been imported yet. Run npm run import:vocabulary.</Warning>
       ) : (
-        <>
-          <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
-            <Stat label="词汇资源文件" value={String(resourceHealth?.byType.ielts_vocabulary ?? 0)} />
-            <Stat label="已解析文件" value={String(health.report?.parsedFiles ?? 0)} />
-            <Stat label="不支持文件" value={String(health.report?.unsupportedFiles?.length ?? 0)} />
-            <Stat label="词条总数" value={String(health.totalVocabularyItems)} />
-            <Stat label="任务词汇可用" value={String(health.usableForLoadout)} />
-            <Stat label="释义题可用" value={String(health.usableForMeaningQuiz)} />
-            <Stat label="听写可用" value={String(health.usableForDictation)} />
-            <Stat label="同义替换可用" value={String(health.usableForSynonymArena)} />
-            <Stat label="需复查" value={String(health.needsReviewCount)} />
-            <Stat label="已合并重复" value={String(health.duplicateCount)} />
-          </div>
-          <p className="mt-4 text-sm text-slate-500">最后导入：{health.lastImportedAt ?? "unknown"}</p>
-        </>
+        <StatsGrid>
+          <Stat label="词汇资源文件" value={String(resourceHealth?.byType.ielts_vocabulary ?? 0)} />
+          <Stat label="已解析文件" value={String(health.report?.parsedFiles ?? 0)} />
+          <Stat label="不支持文件" value={String(health.report?.unsupportedFiles?.length ?? 0)} />
+          <Stat label="词条总数" value={String(health.totalVocabularyItems)} />
+          <Stat label="任务词汇可用" value={String(health.usableForLoadout)} />
+          <Stat label="释义题可用" value={String(health.usableForMeaningQuiz)} />
+          <Stat label="听写可用" value={String(health.usableForDictation)} />
+          <Stat label="同义替换可用" value={String(health.usableForSynonymArena)} />
+          <Stat label="需复查" value={String(health.needsReviewCount)} />
+          <Stat label="已合并重复" value={String(health.duplicateCount)} />
+        </StatsGrid>
       )}
-    </section>
+      {health?.lastImportedAt ? <p className="mt-4 text-sm text-slate-500">最后导入：{health.lastImportedAt}</p> : null}
+    </HealthSection>
   );
 }
 
 function ListeningHealthSection({ health }: { health: ListeningImportHealth | null }) {
   return (
-    <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Audio Import Health</p>
-      <h2 className="mt-2 text-2xl font-black text-slate-950">听力资源导入状态</h2>
+    <HealthSection title="听力资源导入状态" eyebrow="Audio Import Health">
       {!health ? (
-        <p className="mt-3 text-sm text-slate-600">正在读取音频导入报告...</p>
+        <p className="text-sm text-slate-600">正在读取音频导入报告...</p>
       ) : !health.imported ? (
         <Warning>Audio has not been imported yet. Run npm run import:audio.</Warning>
       ) : (
         <>
-          <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+          <StatsGrid>
             <Stat label="音频文件" value={String(health.audioTracks)} />
             <Stat label="Transcript 文件" value={String(health.transcripts)} />
             <Stat label="已匹配音频" value={String(health.matchedPairs)} />
@@ -225,35 +206,26 @@ function ListeningHealthSection({ health }: { health: ListeningImportHealth | nu
             <Stat label="未匹配 Transcript" value={String(health.unmatchedTranscripts)} />
             <Stat label="听写题" value={String(health.dictationItems)} />
             <Stat label="需复查" value={String(health.needsReview)} />
-          </div>
+          </StatsGrid>
           {health.report?.warnings?.length ? <Warning>{health.report.warnings[0]}</Warning> : null}
-          <p className="mt-4 text-sm text-slate-500">最后导入：{health.lastImportedAt ?? "unknown"}</p>
         </>
       )}
-    </section>
+      {health?.lastImportedAt ? <p className="mt-4 text-sm text-slate-500">最后导入：{health.lastImportedAt}</p> : null}
+    </HealthSection>
   );
 }
 
-function ReadingHealthSection({
-  health,
-  resourceHealth,
-}: {
-  health: ReadingImportHealth | null;
-  resourceHealth: ResourceHealth | null;
-}) {
+function ReadingHealthSection({ health, resourceHealth }: { health: ReadingImportHealth | null; resourceHealth: ResourceHealth | null }) {
   const questionsWithoutAnswers = Math.max(0, (health?.questions ?? 0) - (health?.questionsWithAnswers ?? 0));
-
   return (
-    <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Reading Import Health</p>
-      <h2 className="mt-2 text-2xl font-black text-slate-950">阅读真题导入状态</h2>
+    <HealthSection title="阅读真题导入状态" eyebrow="Reading Import Health">
       {!health ? (
-        <p className="mt-3 text-sm text-slate-600">正在读取阅读导入报告...</p>
+        <p className="text-sm text-slate-600">正在读取阅读导入报告...</p>
       ) : !health.imported ? (
         <Warning>Reading resources have not been imported yet. Run npm run import:reading.</Warning>
       ) : (
         <>
-          <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+          <StatsGrid>
             <Stat label="阅读资源文件" value={String(resourceHealth?.byType.ielts_past_paper ?? 0)} />
             <Stat label="已检测阅读文件" value={String(health.report?.readingFilesDetected ?? 0)} />
             <Stat label="不支持文件" value={String(health.report?.unsupportedFiles?.length ?? 0)} />
@@ -266,16 +238,58 @@ function ReadingHealthSection({
             <Stat label="可判分题目" value={String(health.readyQuestions)} />
             <Stat label="题目需复查" value={String(health.questionsNeedingReview)} />
             <Stat label="导入需复查" value={String(health.needsReview)} />
-          </div>
-          {health.questionsWithAnswers === 0 ? (
-            <Warning>Passages imported, but question checking is limited without answer keys.</Warning>
-          ) : null}
+          </StatsGrid>
+          {health.questionsWithAnswers === 0 ? <Warning>Passages imported, but question checking is limited without answer keys.</Warning> : null}
           {health.report?.warnings?.length ? <Warning>{health.report.warnings[0]}</Warning> : null}
-          <p className="mt-4 text-sm text-slate-500">最后导入：{health.lastImportedAt ?? "unknown"}</p>
         </>
       )}
+      {health?.lastImportedAt ? <p className="mt-4 text-sm text-slate-500">最后导入：{health.lastImportedAt}</p> : null}
+    </HealthSection>
+  );
+}
+
+function ScenarioReadingHealthSection({ health, resourceHealth }: { health: ScenarioReadingHealth | null; resourceHealth: ResourceHealth | null }) {
+  return (
+    <HealthSection title="情景阅读导入状态" eyebrow="Scenario Reading Import Health">
+      {!health ? (
+        <p className="text-sm text-slate-600">正在读取情景阅读导入报告...</p>
+      ) : !health.imported ? (
+        <Warning>Scenario reading has not been imported yet. Run npm run import:scenario-reading.</Warning>
+      ) : (
+        <>
+          <StatsGrid>
+            <Stat label="外刊/阅读资源文件" value={String((resourceHealth?.byType.foreign_magazine ?? 0) + (resourceHealth?.byType.user_note ?? 0))} />
+            <Stat label="已检测文件" value={String(health.report?.foreignReadingFilesDetected ?? 0)} />
+            <Stat label="不支持文件" value={String(health.report?.unsupportedFiles?.length ?? 0)} />
+            <Stat label="情景文章" value={String(health.articles)} />
+            <Stat label="可用文章" value={String(health.readyArticles)} />
+            <Stat label="需复查文章" value={String(health.articlesNeedingReview)} />
+            <Stat label="情景词汇" value={String(health.keyVocabulary)} />
+            <Stat label="可积累表达" value={String(health.usefulExpressions)} />
+            <Stat label="长难句" value={String(health.difficultSentences)} />
+            <Stat label="反思提示" value={String(health.scenarioPrompts)} />
+            <Stat label="导入需复查" value={String(health.needsReview)} />
+          </StatsGrid>
+          {health.report?.warnings?.length ? <Warning>{health.report.warnings[0]}</Warning> : null}
+        </>
+      )}
+      {health?.lastImportedAt ? <p className="mt-4 text-sm text-slate-500">最后导入：{health.lastImportedAt}</p> : null}
+    </HealthSection>
+  );
+}
+
+function HealthSection({ title, eyebrow, children }: { title: string; eyebrow: string; children: ReactNode }) {
+  return (
+    <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">{eyebrow}</p>
+      <h2 className="mt-2 text-2xl font-black text-slate-950">{title}</h2>
+      <div className="mt-5">{children}</div>
     </section>
   );
+}
+
+function StatsGrid({ children }: { children: ReactNode }) {
+  return <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">{children}</div>;
 }
 
 function StatusBadge({ ok }: { ok: boolean }) {

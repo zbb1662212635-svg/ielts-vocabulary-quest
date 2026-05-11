@@ -1,41 +1,39 @@
-"use client";
-
-import Link from "next/link";
 import { Database, FileText, ShieldCheck, TerminalSquare } from "lucide-react";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 
-export default function ReadingImportPage() {
+export default function ScenarioReadingImportPage() {
   return (
     <AppShell>
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Reading Import</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">外刊导入工作台</h1>
+        <p className="text-sm font-bold uppercase tracking-wide text-indigo-600">Scenario Reading Import</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">情景阅读导入工作台</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          先 dry-run 查看将要同步的文件，再小批量下载、解析并生成 IELTS-style guided reading sessions。
+          外刊和外部阅读材料在这里被转换成“情景阅读资产”：摘录、背景、词汇、表达、长难句和反思提示，而不是另一套考试题。
         </p>
       </section>
 
       <section className="mt-6 grid gap-4 md:grid-cols-3">
         <StepCard
           icon={ShieldCheck}
-          title="1. 确认来源权限"
-          text="在 Reading Sources 勾选确认，只导入你有权使用的公开或本地材料。"
+          title="1. 确认材料来源"
+          text="只导入你有权用于个人学习的本地或公开材料，原始文件不会进入 GitHub。"
           href="/reading-lab/sources"
-          action="打开来源设置"
+          action="查看来源设置"
         />
         <StepCard
           icon={TerminalSquare}
-          title="2. Dry-run 预览"
-          text="列出将要下载的文件，不写入本地缓存，适合先检查范围和大小。"
+          title="2. 生成情景阅读资产"
+          text="脚本会从 magazines、foreign-reading 或 processed-notes 中提取短摘录和语言资产。"
           href="#commands"
           action="查看命令"
         />
         <StepCard
           icon={Database}
-          title="3. 生成阅读任务"
-          text="下载和解析完成后，文章会写入 data/private/readings.generated.json。"
+          title="3. 在 Mission 中使用"
+          text="Mission 的最后一段会调用相关摘录，帮助你进入真实话题语境。"
           href="/reading-lab/articles"
-          action="查看文章库"
+          action="查看素材库"
         />
       </section>
 
@@ -44,21 +42,17 @@ export default function ReadingImportPage() {
           <FileText className="text-indigo-600" size={22} />
           <h2 className="text-2xl font-black text-slate-950">推荐命令</h2>
         </div>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          第一次只抓 5-10 个文件。实际下载需要你已经确认来源使用权，并加上 <code className="rounded bg-slate-100 px-1 py-0.5">--confirm-consent</code>。
-        </p>
         <pre className="mt-4 overflow-auto rounded-2xl bg-slate-950 p-4 text-sm font-semibold leading-7 text-slate-100">
-{`npm run crawl:readings -- --source awesome_english_ebooks --magazine economist --limit 10 --dry-run
+{`npm run index:resources
+npm run import:scenario-reading
 
-npm run crawl:readings -- --source awesome_english_ebooks --magazine economist --limit 10 --confirm-consent
-
-npm run build:reading-sessions`}
+# 或指定本地文件夹
+npm run import:scenario-reading -- --input "C:/Users/zhangbinbin/Desktop/学英语/foreign-reading"`}
         </pre>
       </section>
 
       <section className="mt-6 rounded-2xl bg-amber-50 p-5 text-sm leading-6 text-amber-950">
-        下载文件、解析文本和生成的私有阅读数据都会写入 <span className="font-black">private/</span> 或{" "}
-        <span className="font-black">data/private/</span>，这些目录已经加入 .gitignore。
+        输出会写入 <span className="font-black">data/private/scenario-*.json</span>。这些私有生成数据已被 .gitignore 排除。
       </section>
     </AppShell>
   );
