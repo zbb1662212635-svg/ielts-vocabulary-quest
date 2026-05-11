@@ -1,44 +1,52 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getSampleIELTSReadingQuestions, getSampleReadingAnswerKeys, getSampleReadingPassages } from "./sampleReadingAssets";
 import type { IELTSReadingQuestion, ReadingAnswerKey, ReadingPassage } from "./types";
+import { arrayOrFallback, fetchJson } from "./clientFetch";
 
-type ReadingAssetsState = {
+type ReadingAssets = {
+  source?: "private" | "sample" | "sample_fallback";
+  passages?: ReadingPassage[];
+  questions?: IELTSReadingQuestion[];
+  answerKeys?: ReadingAnswerKey[];
+};
+
+const fallbackAssets: {
+  source: "private" | "sample" | "sample_fallback";
   passages: ReadingPassage[];
   questions: IELTSReadingQuestion[];
   answerKeys: ReadingAnswerKey[];
+} = {
+  source: "sample_fallback",
+  passages: getSampleReadingPassages(),
+  questions: getSampleIELTSReadingQuestions(),
+  answerKeys: getSampleReadingAnswerKeys(),
 };
 
-const emptyAssets: ReadingAssetsState = { passages: [], questions: [], answerKeys: [] };
-
 export function useReadingAssets() {
-  const [assets, setAssets] = useState<ReadingAssetsState>(emptyAssets);
+  const [assets, setAssets] = useState(fallbackAssets);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadReadingAssets() {
-      try {
-        const response = await fetch("/api/reading-assets");
-        if (!response.ok) throw new Error(`Reading assets API failed: ${response.status}`);
-
-        const data: unknown = await response.json();
-        const record = data as Partial<ReadingAssetsState>;
-
-        if (!cancelled) {
-          setAssets({
-            passages: Array.isArray(record.passages) ? record.passages : [],
-            questions: Array.isArray(record.questions) ? record.questions : [],
-            answerKeys: Array.isArray(record.answerKeys) ? record.answerKeys : [],
-          });
-        }
-      } catch (error) {
-        console.warn("Reading assets failed to load. Continuing with mission fallback reading.", error);
-        if (!cancelled) setAssets(emptyAssets);
-      }
-    }
-
-    loadReadingAssets();
+    fetchJson<ReadingAssets>("/api/reading-assets")
+      .then((payload) => {
+        if (cancelled) return;
+        const passages = arrayOrFallback<ReadingPassage>(payload.passages, fallbackAssets.passages);
+        const questions = arrayOrFallback<IELTSReadingQuestion>(payload.questions, fallbackAssets.questions);
+        const answerKeys = arrayOrFallback<ReadingAnswerKey>(payload.answerKeys, fallbackAssets.answerKeys);
+        setAssets({
+          source: payload.source ?? "sample_fallback",
+          passages: passages.length ? passages : fallbackAssets.passages,
+          questions: questions.length ? questions : fallbackAssets.questions,
+          answerKeys: answerKeys.length ? answerKeys : fallbackAssets.answerKeys,
+        });
+      })
+      .catch((error) => {
+        console.warn("Reading assets failed to load; using bundled sample reading assets.", error);
+        if (!cancelled) setAssets(fallbackAssets);
+      });
 
     return () => {
       cancelled = true;

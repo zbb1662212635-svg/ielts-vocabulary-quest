@@ -22,7 +22,11 @@
     "build:reading-sessions": "node scripts/build-reading-sessions.mjs",
     "sync:readings": "npm run crawl:readings && npm run build:reading-sessions",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check": "npm run lint && npm run build",
+    "smoke:source": "node scripts/smoke-source.mjs",
+    "smoke:http": "node scripts/smoke-http.mjs",
+    "verify": "npm run smoke:source && npm run build"
   },
   "dependencies": {
     "fast-xml-parser": "^5.7.3",

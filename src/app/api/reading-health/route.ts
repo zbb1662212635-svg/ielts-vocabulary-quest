@@ -1,34 +1,52 @@
-import fs from "node:fs";
-import path from "node:path";
 import { NextResponse } from "next/server";
-import { getIELTSReadingQuestions, getReadingImportReport, getReadingPassages } from "@/lib/readingAssetLoader";
+import {
+  getIELTSReadingQuestions,
+  getReadingAssetSource,
+  getReadingImportReport,
+  getReadingPassages,
+} from "@/lib/readingAssetLoader";
+
+export const dynamic = "force-dynamic";
 
 export function GET() {
-  const report = getReadingImportReport();
-  const needsReviewPath = path.join(process.cwd(), "data", "private", "reading.needs-review.json");
-  let needsReview = 0;
-  if (fs.existsSync(needsReviewPath)) {
-    try {
-      const payload = JSON.parse(fs.readFileSync(needsReviewPath, "utf8")) as { totalItems?: number; items?: unknown[] };
-      needsReview = payload.totalItems ?? payload.items?.length ?? 0;
-    } catch {
-      needsReview = 0;
-    }
+  try {
+    const passages = getReadingPassages();
+    const questions = getIELTSReadingQuestions();
+    const report = getReadingImportReport();
+    const source = getReadingAssetSource();
+    const readyQuestions = questions.filter((question) => question.status === "ready").length;
+    const questionsWithAnswers = questions.filter((question) => Boolean(question.correctAnswer)).length;
+    const questionsWithEvidence = questions.filter((question) => Boolean(question.evidenceText)).length;
+    const questionsNeedingReview = questions.filter((question) => question.status === "needs_review").length;
+
+    return NextResponse.json({
+      imported: source === "private",
+      source,
+      sampleFallbackActive: source === "sample",
+      passages: passages.length,
+      questions: questions.length,
+      readyQuestions,
+      questionsWithAnswers,
+      questionsWithEvidence,
+      questionsNeedingReview,
+      needsReview: questionsNeedingReview + passages.filter((passage) => passage.status === "needs_review").length,
+      lastImportedAt: typeof report?.generatedAt === "string" ? report.generatedAt : null,
+    });
+  } catch (error) {
+    console.warn("Reading health failed.", error);
+    return NextResponse.json({
+      imported: false,
+      source: "sample_fallback",
+      sampleFallbackActive: true,
+      passages: 0,
+      questions: 0,
+      readyQuestions: 0,
+      questionsWithAnswers: 0,
+      questionsWithEvidence: 0,
+      questionsNeedingReview: 0,
+      needsReview: 0,
+      lastImportedAt: null,
+      error: "reading_health_failed",
+    });
   }
-
-  const passages = getReadingPassages();
-  const questions = getIELTSReadingQuestions();
-
-  return NextResponse.json({
-    imported: Boolean(report),
-    report,
-    passages: passages.length,
-    questions: questions.length,
-    readyQuestions: questions.filter((item) => item.status === "ready").length,
-    questionsWithAnswers: questions.filter((item) => item.correctAnswer).length,
-    questionsWithEvidence: questions.filter((item) => item.evidenceText).length,
-    questionsNeedingReview: questions.filter((item) => item.status === "needs_review").length,
-    needsReview,
-    lastImportedAt: report?.generatedAt ?? null,
-  });
 }

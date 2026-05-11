@@ -1,36 +1,43 @@
+import fs from "node:fs";
+import path from "node:path";
 import { NextResponse } from "next/server";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import sampleReadings from "@/data/readings.sample.json";
 import type { ReadingArticle } from "@/lib/types";
 
-type PrivateReadingsPayload = {
-  metadata?: {
-    count?: number;
-    source?: string;
-    generatedAt?: string;
-  };
-  articles?: ReadingArticle[];
-};
+export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const usePrivateReadings = process.env.NEXT_PUBLIC_USE_PRIVATE_READINGS === "true";
-  const privatePath = join(process.cwd(), "data", "private", "readings.generated.json");
+const sampleArticles = sampleReadings as ReadingArticle[];
+const privateFile = path.join(process.cwd(), "data", "private", "reading-articles.generated.json");
 
-  if (usePrivateReadings && existsSync(privatePath)) {
-    const payload = JSON.parse(readFileSync(privatePath, "utf8")) as PrivateReadingsPayload;
-    const articles = payload.articles ?? [];
+function readPrivateArticles(): ReadingArticle[] {
+  if (!fs.existsSync(privateFile)) return [];
+  const payload = JSON.parse(fs.readFileSync(privateFile, "utf8"));
+  const articles = Array.isArray(payload?.articles)
+    ? payload.articles
+    : Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload)
+        ? payload
+        : [];
+  return articles.filter(Boolean) as ReadingArticle[];
+}
+
+export function GET() {
+  try {
+    const privateArticles = readPrivateArticles();
+    const articles = privateArticles.length ? privateArticles : sampleArticles;
+    const source = privateArticles.length ? "private" : "sample";
     return NextResponse.json({
-      source: "private",
-      metadata: { ...(payload.metadata ?? {}), count: articles.length },
+      source,
+      metadata: { count: articles.length, source, generatedAt: new Date().toISOString() },
       articles,
     });
+  } catch (error) {
+    console.warn("Readings API failed; returning sample readings.", error);
+    return NextResponse.json({
+      source: "sample_fallback",
+      metadata: { count: sampleArticles.length, source: "sample", note: "API fallback returned bundled sample readings." },
+      articles: sampleArticles,
+    });
   }
-
-  const articles = sampleReadings as ReadingArticle[];
-  return NextResponse.json({
-    source: usePrivateReadings ? "sample_fallback" : "sample",
-    metadata: { count: articles.length, source: "sample" },
-    articles,
-  });
 }
